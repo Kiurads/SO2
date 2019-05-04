@@ -7,6 +7,8 @@
 //Definir uma constante para facilitar a leitura do prot�tipo da fun��o
 //Este .h deve ser inclu�do no projeto que o vai usar (modo impl�cito)
 
+#define TOP 10
+#define SIZE 50
 #define TAM 50
 #define BUFFER_MAX_SIZE 256
 #define SERVER_PIPE_NAME TEXT("\\\\.\\pipe\\server")
@@ -14,6 +16,11 @@
 #define CLIENT_PIPE_NAME TEXT("\\\\.\\pipe\\client")
 #define BROADCAST_PIPE_NAME TEXT("\\\\.\\pipe\\broadcast")
 #define LOGIN_SUCCESS "1"
+
+typedef struct {
+	TCHAR tUsername[SIZE];
+	int hiScore;
+} player, *pPlayer;
 
 //Esta macro � definida pelo sistema caso estejamos na DLL (<DLL_IMP>_EXPORTS definida)
 //ou na app (<DLL_IMP>_EXPORTS n�o definida) onde DLL_IMP � o nome deste projeto

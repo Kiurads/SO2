@@ -4,19 +4,11 @@
 #include <tchar.h>
 #include <fcntl.h>
 #include <io.h>
-#include "Dll.h"
-
-#define TOP 10
-#define SIZE 50
-
-typedef struct player {
-	TCHAR tUsername[SIZE];
-	int hiScore;
-} player;
+#include "..\Dll\Dll.h"
 
 int cmpfunc(const void * a, const void * b) {
-	player *x = (player*)a;
-	player *y = (player*)b;
+	pPlayer x = (pPlayer)a;
+	pPlayer y = (pPlayer)b;
 
 	return (x->hiScore - y->hiScore);
 }
@@ -138,17 +130,17 @@ int setupRegisty() {
 
 int getLogin() {
 	BOOL check = false;
-	_tprintf(TEXT("� espera que um Cliente estabele�a uma liga��o com o Servidor\n"));
+	_tprintf(TEXT("À espera que um Cliente estabeleça uma ligação com o Servidor\n"));
 
 	check = ConnectNamedPipe(hLoginPipe, NULL);
 
 	if (!check) {
-		_tprintf(TEXT("[ERRO] Liga��o inv�lida com o Cliente"));
+		_tprintf(TEXT("[ERRO] Ligação inválida com o Cliente"));
 		return -1;
 	}
 
 	if (!ReadFile(hLoginPipe, &buffer, BUFFER_MAX_SIZE * sizeof(TCHAR), &nBytes, NULL)) {
-		_tprintf(TEXT("LONG DICK %d"), GetLastError());
+		_tprintf(TEXT("[ERRO] %d"), GetLastError());
 		_gettchar();
 		return -1;
 	}
@@ -172,7 +164,7 @@ int _tmain(int argc, LPTSTR argv) {
 #endif
 
 	if (setupServerPipes() == -1) {
-		_tprintf(TEXT("N�o foi poss�vel criar o pipe do Servidor\n"));
+		_tprintf(TEXT("Não foi possível criar o pipe do Servidor\n"));
 		_gettchar();
 		exit(-1);
 	}
@@ -184,7 +176,7 @@ int _tmain(int argc, LPTSTR argv) {
 
 	do {
 		if (getLogin() == -1) {
-			_tprintf(TEXT("Login Inv�lido por parte de um Cliente\n"));
+			_tprintf(TEXT("Login inválido por parte de um Cliente\n"));
 		}
 		else
 			break;
@@ -192,8 +184,6 @@ int _tmain(int argc, LPTSTR argv) {
 
 
 	//startBallMovement();
-
-	_gettchar();
 
 	_gettchar();
 

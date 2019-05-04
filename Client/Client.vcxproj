@@ -21,6 +21,11 @@
   <ItemGroup>
     <ClCompile Include="ClientMain.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Dll\Dll.vcxproj">
+      <Project>{756e7cab-d8a7-4b84-abe2-41b73c2b0761}</Project>
+    </ProjectReference>
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{16C7DA0D-35FA-4119-B30C-F7C08318EC38}</ProjectGuid>
@@ -79,6 +84,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">

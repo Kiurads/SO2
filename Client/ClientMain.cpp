@@ -4,7 +4,7 @@
 #include <tchar.h>
 #include <fcntl.h>
 #include <io.h>
-#include "Dll.h"
+#include "..\Dll\Dll.h"
 
 int _tmain(int argc, LPTSTR argv) {
 

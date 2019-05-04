@@ -1,9 +1,7 @@
 ﻿// DLL.cpp : Defines the exported functions for the DLL application.
-//
+
 #include <windows.h>
 #include "Dll.h"
-#include <windows.h>
-#include "DLL.h"
 
 char pointer[4096];
 
@@ -32,11 +30,9 @@ int Login(void) {
 	//hPipe = CreateFile(PIPE_NAME, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
 	if (hLoginPipe == INVALID_HANDLE_VALUE) {
 		_tprintf(TEXT("LAST ERROR: %d"), GetLastError());
-		_tprintf(TEXT("[ERRO] N�o foi poss�vel abrir o pipe do Servidor para escrita\n"));
+		_tprintf(TEXT("[ERRO] Não foi possível abrir o pipe do Servidor para escrita\n"));
 		return -1;
 	}
-
-	_tprintf(TEXT("OLA OLA OLA\n"));
 
 	/*check = WaitNamedPipe(LOGIN_PIPE_NAME, INFINITE);
 
@@ -67,10 +63,10 @@ int Login(void) {
 		success = ReadFile(hClientPipe, buffer, sizeof(buffer), &nBytes, NULL);
 
 		if (nBytes != sizeof(int)) {
-			_tprintf(TEXT("[ERRO] Mensagem recebida do servidor � incoerente\n"));
+			_tprintf(TEXT("[ERRO] Mensagem recebida do servidor é incoerente\n"));
 		}
 		else if (!success) {
-			_tprintf(TEXT("[ERRO] N�o foi possível abrir o pipe do Cliente para leitura\n"));
+			_tprintf(TEXT("[ERRO] Não foi possível abrir o pipe do Cliente para leitura\n"));
 		}
 		else {
 			buffer[nBytes / sizeof(int)] = '\0';
@@ -80,7 +76,7 @@ int Login(void) {
 				break;
 			}
 			else {
-				_tprintf(TEXT("[ERRO] Autentica��o inv�lida\n"));
+				_tprintf(TEXT("[ERRO] Autenticação inválida\n"));
 			}
 		}
 
@@ -98,7 +94,7 @@ int SendMsg(void) {
 	hServerPipe = CreateFile(SERVER_PIPE_NAME, GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 
 	if (hServerPipe == NULL) {
-		_tprintf(TEXT("[ERRO] N�o foi poss�vewl estabelecer ligação com o Servidor\n"));
+		_tprintf(TEXT("[ERRO] Não foi poss�vewl estabelecer ligação com o Servidor\n"));
 		return -1;
 	}
 
@@ -108,7 +104,7 @@ int SendMsg(void) {
 	tName[_tcslen(tName) - 1] = '\0';
 
 	if (!WriteFile(hServerPipe, buffer, _tcsclen(tName) * sizeof(TCHAR), &nBytes, NULL)) {
-		_tprintf(TEXT("[ERRO] N�o foi poss�vel escrever para o pipe do Servidor (any key to exit)\n"));
+		_tprintf(TEXT("[ERRO] Não foi poss�vel escrever para o pipe do Servidor (any key to exit)\n"));
 		return -1;
 	}
 
@@ -120,12 +116,12 @@ int ReceiveMessage(void) {
 	hClientPipe = CreateFile(CLIENT_PIPE_NAME, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 
 	if (hClientPipe == NULL) {
-		_tprintf(TEXT("[ERRO] N�o foi poss�vel abrir o pipe do Cliente\n"));
+		_tprintf(TEXT("[ERRO] Não foi possível abrir o pipe do Cliente\n"));
 		return -1;
 	}
 
 	if (!ReadFile(hClientPipe, buffer, sizeof(buffer), &nBytes, NULL)) {
-		_tprintf(TEXT("[ERRO] Leitura do Pipe do Cliente n�o foi bem sucedida\n"));
+		_tprintf(TEXT("[ERRO] Leitura do Pipe do Cliente não foi bem sucedida\n"));
 		return -1;
 	}
 
