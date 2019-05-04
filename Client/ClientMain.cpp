@@ -19,11 +19,6 @@ int _tmain(int argc, LPTSTR argv) {
 		exit(-1);
 	}
 
-	/*if (SendMsg() == -1) {
-		_gettchar();
-		exit(-1);
-	}*/
-
 	_gettchar();
 
 	return 0;
