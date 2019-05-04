@@ -2,8 +2,11 @@
 
 HKEY hRegKey; //Top 10 stored in registry
 player tpTopTen[TOP], newUser; //Top 10 usernames
+HANDLE hBallThread;
+DWORD dwBallThreadId;
 DWORD dwResult;
 DWORD dwSize;
+ball gameBall;
 
 int _tmain(int argc, LPTSTR argv) {
 
@@ -13,7 +16,7 @@ int _tmain(int argc, LPTSTR argv) {
 	_setmode(_fileno(stderr), _O_WTEXT);
 #endif
 
-	if (setupServerPipes() == -1) {
+	if (setupServer() == -1) {
 		_tprintf(TEXT("Não foi possível criar o pipe do Servidor\n"));
 		_gettchar();
 		exit(-1);
@@ -31,21 +34,55 @@ int _tmain(int argc, LPTSTR argv) {
 			break;
 	} while (TRUE);
 
-	//startBallMovement();
+	hBallThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)BallThread, NULL, NULL, &dwBallThreadId);
+
+	WaitForSingleObject(hBallThread, INFINITE);
 
 	_gettchar();
 
 	return 0;
 }
 
-int setupServerPipes() {
-	hServerPipe = CreateNamedPipe(SERVER_PIPE_NAME, PIPE_ACCESS_INBOUND, PIPE_WAIT | PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE, 1, sizeof(buffer), sizeof(buffer), 2000, NULL);
+DWORD WINAPI BallThread(LPVOID lpParam) {
+	UNREFERENCED_PARAMETER(lpParam);
+
+	int x = 1;
+	int y = 1;
+
+	TCHAR message[TAM];
+
+	while (TRUE) {
+		gameBall.x += x;
+		gameBall.y += y;
+
+		if (gameBall.x == MAX_X || gameBall.x == 0) x = x * (-1);
+		if (gameBall.y == MAX_Y || gameBall.y == 0) y = y * (-1);
+
+		_stprintf(message, TEXT("X:%d Y:%d"), gameBall.x, gameBall.y);
+
+		_tprintf(TEXT("%s\n"), message);
+
+		if (!WriteFile(hClientPipe, message, (DWORD)_tcslen(message) * sizeof(TCHAR), &nBytes, NULL)) {
+			_tprintf(TEXT("[ERRO] Não foi possível escrever para o pipe do Cliente\n"));
+			return -1;
+		}
+
+		SetEvent(hReadEvent);
+
+		Sleep(1000);
+	}
+
+	return 0;
+}
+
+int setupServer() {
 	hLoginPipe = CreateNamedPipe(LOGIN_PIPE_NAME, PIPE_ACCESS_DUPLEX, PIPE_WAIT | PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE, 1, sizeof(buffer), sizeof(buffer), 2000, NULL);
 	hClientPipe = CreateNamedPipe(CLIENT_PIPE_NAME, PIPE_ACCESS_OUTBOUND, PIPE_WAIT | PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE, 1, sizeof(buffer), sizeof(buffer), 2000, NULL);
+	hReadEvent = CreateEvent(NULL, FALSE, FALSE, TEXT("ReadEvent"));
 
-	if (hServerPipe == INVALID_HANDLE_VALUE || hLoginPipe == INVALID_HANDLE_VALUE || hClientPipe == INVALID_HANDLE_VALUE) {
-		return -1;
-	}
+	gameBall.x = 0;
+	gameBall.y = 0;
+
 	return 0;
 }
 
@@ -67,11 +104,11 @@ int getLogin() {
 	}
 	else {
 		buffer[nBytes / sizeof(TCHAR)] = '\0';
-		_tprintf(TEXT("Utilizador %s autenticado com sucesso"), buffer);
+		_tprintf(TEXT("Utilizador %s autenticado com sucesso\n"), buffer);
 		_tcscpy(newUser.tUsername, buffer);
 		newUser.hiScore = 0;
 
-		if (!WriteFile(hClientPipe , TEXT("1"), sizeof(TCHAR), &nBytes, NULL)) {
+		if (!WriteFile(hClientPipe, LOGIN_SUCCESS, sizeof(TCHAR), &nBytes, NULL)) {
 			_tprintf(TEXT("[ERRO] Não foi possível escrever para o pipe do Cliente\n"));
 			return -1;
 		}
@@ -90,7 +127,7 @@ int setupRegisty() {
 		_tprintf(TEXT("TOP 10\n\n"));
 
 		for (int i = 0; i < TOP; i++) {
-			TCHAR tPoints[SIZE];
+			TCHAR tPoints[TAM];
 
 			_tprintf(TEXT("Username %d: "), i + 1);
 			_tscanf(TEXT("%49s"), tpTopTen[i].tUsername);
@@ -100,7 +137,7 @@ int setupRegisty() {
 
 			_stprintf(tPoints, TEXT("%d"), tpTopTen[i].hiScore);
 
-			RegSetValueEx(hRegKey, tpTopTen[i].tUsername, 0, REG_SZ, (LPBYTE)tPoints, _tcslen(tPoints) * sizeof(TCHAR));
+			RegSetValueEx(hRegKey, tpTopTen[i].tUsername, 0, REG_SZ, (LPBYTE)tPoints, (DWORD)_tcslen(tPoints) * sizeof(TCHAR));
 
 			fflush(stdin);
 		}
@@ -120,7 +157,7 @@ int setupRegisty() {
 			_tprintf(TEXT("%s: %d\n"), tpTopTen[i].tUsername, tpTopTen[i].hiScore);
 
 			//Register positions of the users
-			RegSetValueEx(hRegKey, tPosition, 0, REG_SZ, (LPBYTE)tpTopTen[i].tUsername,	_tcslen(tpTopTen[i].tUsername) * sizeof(TCHAR));
+			RegSetValueEx(hRegKey, tPosition, 0, REG_SZ, (LPBYTE)tpTopTen[i].tUsername, (DWORD)_tcslen(tpTopTen[i].tUsername) * sizeof(TCHAR));
 		}
 	}
 	else {
@@ -135,7 +172,7 @@ int setupRegisty() {
 
 			_stprintf(tPosition, TEXT("%d"), position);
 
-			dwSize = SIZE;
+			dwSize = TAM;
 			memset(tpTopTen[i].tUsername, '\0', dwSize);
 
 			//Read usernames from registry

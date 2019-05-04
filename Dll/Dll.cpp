@@ -5,6 +5,7 @@
 
 char pointer[4096];
 
+HANDLE hReadEvent;
 HANDLE hServerPipe;
 HANDLE hLoginPipe;;
 HANDLE hClientPipe;
@@ -33,7 +34,7 @@ int Login(void) {
 
 		tName[_tcslen(tName) - 1] = '\0';
 
-		if (!WriteFile(hLoginPipe, tName, _tcsclen(tName) * sizeof(TCHAR), &nBytes, NULL)) {
+		if (!WriteFile(hLoginPipe, tName, (DWORD)_tcsclen(tName) * sizeof(TCHAR), &nBytes, NULL)) {
 			_tprintf(TEXT("[ERRO] Não foi possível escrever para o pipe do Servidor (any key to exit)\n"));
 			return -1;
 		}
@@ -67,10 +68,6 @@ int Login(void) {
 
 	} while (nBytes != _tcsclen(tName) * sizeof(TCHAR));
 
-
-	CloseHandle(hClientPipe);
-	CloseHandle(hLoginPipe);
-
 	return 0;
 
 }
@@ -88,7 +85,7 @@ int SendMsg(void) {
 
 	tName[_tcslen(tName) - 1] = '\0';
 
-	if (!WriteFile(hServerPipe, buffer, _tcsclen(tName) * sizeof(TCHAR), &nBytes, NULL)) {
+	if (!WriteFile(hServerPipe, buffer, (DWORD)_tcsclen(tName) * sizeof(TCHAR), &nBytes, NULL)) {
 		_tprintf(TEXT("[ERRO] Não foi poss�vel escrever para o pipe do Servidor (any key to exit)\n"));
 		return -1;
 	}

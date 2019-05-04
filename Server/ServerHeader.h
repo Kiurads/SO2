@@ -8,5 +8,6 @@
 
 int getLogin();
 int setupRegisty();
-int setupServerPipes();
+int setupServer();
 int cmpfunc(const void * a, const void * b);
+DWORD WINAPI BallThread(LPVOID);
