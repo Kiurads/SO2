@@ -5,11 +5,13 @@
 
 char pointer[4096];
 
+HANDLE hMapFile;
 HANDLE hReadEvent;
 HANDLE hServerPipe;
-HANDLE hLoginPipe;;
+HANDLE hLoginPipe;
 HANDLE hClientPipe;
 HANDLE hBroadcastPipe;
+TCHAR (*lpMappedBuffer)[BUFFER_MAX_SIZE];
 BOOL success = false;
 DWORD nBytes;
 TCHAR tName[TAM], buffer[BUFFER_MAX_SIZE];

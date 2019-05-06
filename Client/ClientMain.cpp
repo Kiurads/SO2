@@ -26,6 +26,18 @@ int _tmain(int argc, LPTSTR argv) {
 
 	hReadEvent = CreateEvent(NULL, FALSE, FALSE, TEXT("ReadEvent"));
 
+	hMapFile = OpenFileMapping(
+		FILE_MAP_ALL_ACCESS,
+		FALSE,
+		MAPPED_FILE_NAME);
+
+	lpMappedBuffer = (TCHAR(*)[BUFFER_MAX_SIZE])MapViewOfFile(hMapFile,
+		FILE_MAP_ALL_ACCESS,  
+		0,
+		0,
+		BUFFER_MAX_SIZE);
+
+
 	hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ReceiveBall, NULL, 0, NULL);
 
 	_gettch();
@@ -34,6 +46,9 @@ int _tmain(int argc, LPTSTR argv) {
 
 	WaitForSingleObject(hThread, INFINITE);
 
+	UnmapViewOfFile(lpMappedBuffer);
+	CloseHandle(hMapFile);
+	CloseHandle(hReadEvent);
 	return 0;
 }
 
@@ -50,13 +65,13 @@ DWORD WINAPI ReceiveBall(LPVOID lpParam) {
 			termina = TRUE;
 		}
 
-		if (!ReadFile(hClientPipe, buffer, sizeof(buffer), &nBytes, NULL)) {
+		/*if (!ReadFile(hClientPipe, buffer, sizeof(buffer), &nBytes, NULL)) {
 			_tprintf(TEXT("[ERRO] Erro na leitura de dados do servidor\n"));
 			termina = TRUE;
-		}
+		}*/
 
-		buffer[nBytes / sizeof(TCHAR)] = '\0';
-		_tprintf(TEXT("[SERVER] Posição da bola: %s\n"), buffer);
+		//(*lpMappedBuffer)[_tcslen((*lpMappedBuffer)) / sizeof(TCHAR)] = '\0';
+		_tprintf(TEXT("[SERVER] Posição da bola: %s\n"), lpMappedBuffer);
 	}
 
 	return 0;

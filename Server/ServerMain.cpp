@@ -58,14 +58,14 @@ DWORD WINAPI BallThread(LPVOID lpParam) {
 		if (gameBall.x == MAX_X || gameBall.x == 0) x = x * (-1);
 		if (gameBall.y == MAX_Y || gameBall.y == 0) y = y * (-1);
 
-		_stprintf(message, TEXT("X:%d Y:%d"), gameBall.x, gameBall.y);
+		_stprintf((*lpMappedBuffer), TEXT("X:%d Y:%d"), gameBall.x, gameBall.y);
 
-		_tprintf(TEXT("%s\n"), message);
+		//_tprintf(TEXT("%s\n"), message);
 
-		if (!WriteFile(hClientPipe, message, (DWORD)_tcslen(message) * sizeof(TCHAR), &nBytes, NULL)) {
+		/*if (!WriteFile(hClientPipe, message, (DWORD)_tcslen(message) * sizeof(TCHAR), &nBytes, NULL)) {
 			_tprintf(TEXT("[ERRO] Não foi possível escrever para o pipe do Cliente\n"));
 			return -1;
-		}
+		}*/
 
 		SetEvent(hReadEvent);
 
@@ -79,6 +79,20 @@ int setupServer() {
 	hLoginPipe = CreateNamedPipe(LOGIN_PIPE_NAME, PIPE_ACCESS_DUPLEX, PIPE_WAIT | PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE, 1, sizeof(buffer), sizeof(buffer), 2000, NULL);
 	hClientPipe = CreateNamedPipe(CLIENT_PIPE_NAME, PIPE_ACCESS_OUTBOUND, PIPE_WAIT | PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE, 1, sizeof(buffer), sizeof(buffer), 2000, NULL);
 	hReadEvent = CreateEvent(NULL, FALSE, FALSE, TEXT("ReadEvent"));
+
+	hMapFile = CreateFileMapping(
+		INVALID_HANDLE_VALUE,
+		NULL,
+		PAGE_READWRITE,
+		0,
+		BUFFER_MAX_SIZE,
+		MAPPED_FILE_NAME);
+
+	lpMappedBuffer = (TCHAR(*)[BUFFER_MAX_SIZE])MapViewOfFile(hMapFile,
+		FILE_MAP_ALL_ACCESS,
+		0,
+		0,
+		BUFFER_MAX_SIZE);
 
 	gameBall.x = 0;
 	gameBall.y = 0;

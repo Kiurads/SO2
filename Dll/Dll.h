@@ -12,6 +12,7 @@
 #define BUFFER_MAX_SIZE 256
 #define MAX_X 10
 #define MAX_Y 15
+#define MAPPED_FILE_NAME TEXT("MappedFile")
 #define SERVER_PIPE_NAME TEXT("\\\\.\\pipe\\server")
 #define LOGIN_PIPE_NAME TEXT("\\\\.\\pipe\\login")
 #define CLIENT_PIPE_NAME TEXT("\\\\.\\pipe\\client")
@@ -40,10 +41,12 @@ typedef struct {
 extern "C"
 {
 	//Variáveis globais da DLL
+	extern DLL_APIS HANDLE hMapFile;
 	extern DLL_APIS HANDLE hReadEvent;
 	extern DLL_APIS HANDLE hLoginPipe;
 	extern DLL_APIS HANDLE hClientPipe;
 	extern DLL_APIS HANDLE hBroadcastPipe;
+	extern DLL_APIS TCHAR(*lpMappedBuffer)[BUFFER_MAX_SIZE];
 	extern DLL_APIS BOOL success;
 	extern DLL_APIS DWORD nBytes;
 	extern DLL_APIS TCHAR tName[TAM], buffer[BUFFER_MAX_SIZE];
