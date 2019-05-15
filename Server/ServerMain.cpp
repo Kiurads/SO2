@@ -6,7 +6,7 @@ HANDLE hBallThread;
 DWORD dwBallThreadId;
 DWORD dwResult;
 DWORD dwSize;
-ball gameBall;
+game gameData;
 
 int _tmain(int argc, LPTSTR argv) {
 
@@ -52,20 +52,13 @@ DWORD WINAPI BallThread(LPVOID lpParam) {
 	TCHAR message[TAM];
 
 	while (TRUE) {
-		gameBall.x += x;
-		gameBall.y += y;
+		gameData.gameBall.x += x;
+		gameData.gameBall.y += y;
 
-		if (gameBall.x == MAX_X || gameBall.x == 0) x = x * (-1);
-		if (gameBall.y == MAX_Y || gameBall.y == 0) y = y * (-1);
+		if (gameData.gameBall.x == MAX_X || gameData.gameBall.x == 0) x = x * (-1);
+		if (gameData.gameBall.y == MAX_Y || gameData.gameBall.y == 0) y = y * (-1);
 
-		_stprintf((*lpMappedBuffer), TEXT("X:%d Y:%d"), gameBall.x, gameBall.y);
-
-		//_tprintf(TEXT("%s\n"), message);
-
-		/*if (!WriteFile(hClientPipe, message, (DWORD)_tcslen(message) * sizeof(TCHAR), &nBytes, NULL)) {
-			_tprintf(TEXT("[ERRO] Não foi possível escrever para o pipe do Cliente\n"));
-			return -1;
-		}*/
+		(*gMappedGame) = gameData;
 
 		SetEvent(hReadEvent);
 
@@ -76,59 +69,22 @@ DWORD WINAPI BallThread(LPVOID lpParam) {
 }
 
 int setupServer() {
-	hLoginPipe = CreateNamedPipe(LOGIN_PIPE_NAME, PIPE_ACCESS_DUPLEX, PIPE_WAIT | PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE, 1, sizeof(buffer), sizeof(buffer), 2000, NULL);
-	hClientPipe = CreateNamedPipe(CLIENT_PIPE_NAME, PIPE_ACCESS_OUTBOUND, PIPE_WAIT | PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE, 1, sizeof(buffer), sizeof(buffer), 2000, NULL);
 	hReadEvent = CreateEvent(NULL, FALSE, FALSE, TEXT("ReadEvent"));
 
-	hMapFile = CreateFileMapping(
-		INVALID_HANDLE_VALUE,
-		NULL,
-		PAGE_READWRITE,
-		0,
-		BUFFER_MAX_SIZE,
-		MAPPED_FILE_NAME);
+	hLoginMapFile = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, BUFFER_MAX_SIZE, LOGIN_FILE_NAME);
+	lpLoginBuffer = (TCHAR(*)[BUFFER_MAX_SIZE])MapViewOfFile(hLoginMapFile, FILE_MAP_ALL_ACCESS, 0, 0, BUFFER_MAX_SIZE);
 
-	lpMappedBuffer = (TCHAR(*)[BUFFER_MAX_SIZE])MapViewOfFile(hMapFile,
-		FILE_MAP_ALL_ACCESS,
-		0,
-		0,
-		BUFFER_MAX_SIZE);
+	hGameMapFile = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, BUFFER_MAX_SIZE, GAME_FILE_NAME);
+	gMappedGame = (game(*))MapViewOfFile(hGameMapFile, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(game));
 
-	gameBall.x = 0;
-	gameBall.y = 0;
+	gameData.gameBall.x = 0;
+	gameData.gameBall.y = 0;
 
 	return 0;
 }
 
 int getLogin() {
-	BOOL check = false;
-	_tprintf(TEXT("À espera que um Cliente estabeleça uma ligação com o Servidor\n"));
-
-	check = ConnectNamedPipe(hLoginPipe, NULL);
-
-	if (!check) {
-		_tprintf(TEXT("[ERRO] Ligação inválida com o Cliente"));
-		return -1;
-	}
-
-	if (!ReadFile(hLoginPipe, &buffer, BUFFER_MAX_SIZE * sizeof(TCHAR), &nBytes, NULL)) {
-		_tprintf(TEXT("[ERRO] %d"), GetLastError());
-		_gettchar();
-		return -1;
-	}
-	else {
-		buffer[nBytes / sizeof(TCHAR)] = '\0';
-		_tprintf(TEXT("Utilizador %s autenticado com sucesso\n"), buffer);
-		_tcscpy(newUser.tUsername, buffer);
-		newUser.hiScore = 0;
-
-		if (!WriteFile(hClientPipe, LOGIN_SUCCESS, sizeof(TCHAR), &nBytes, NULL)) {
-			_tprintf(TEXT("[ERRO] Não foi possível escrever para o pipe do Cliente\n"));
-			return -1;
-		}
-	}
-
-	return 0;
+	return -1;
 }
 
 int setupRegisty() {

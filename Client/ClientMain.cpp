@@ -10,6 +10,7 @@ bool termina = false;
 HANDLE hThread;
 
 DWORD WINAPI ReceiveBall(LPVOID);
+void SetupClient();
 
 int _tmain(int argc, LPTSTR argv) {
 
@@ -19,24 +20,12 @@ int _tmain(int argc, LPTSTR argv) {
 	_setmode(_fileno(stderr), _O_WTEXT);
 #endif
 
+	SetupClient();
+
 	if (Login() == -1) {
 		_gettchar();
 		exit(-1);
 	}
-
-	hReadEvent = CreateEvent(NULL, FALSE, FALSE, TEXT("ReadEvent"));
-
-	hMapFile = OpenFileMapping(
-		FILE_MAP_ALL_ACCESS,
-		FALSE,
-		MAPPED_FILE_NAME);
-
-	lpMappedBuffer = (TCHAR(*)[BUFFER_MAX_SIZE])MapViewOfFile(hMapFile,
-		FILE_MAP_ALL_ACCESS,  
-		0,
-		0,
-		BUFFER_MAX_SIZE);
-
 
 	hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ReceiveBall, NULL, 0, NULL);
 
@@ -46,10 +35,21 @@ int _tmain(int argc, LPTSTR argv) {
 
 	WaitForSingleObject(hThread, INFINITE);
 
-	UnmapViewOfFile(lpMappedBuffer);
-	CloseHandle(hMapFile);
+	UnmapViewOfFile(lpLoginBuffer);
+	CloseHandle(hGameMapFile);
 	CloseHandle(hReadEvent);
 	return 0;
+}
+
+void SetupClient() {
+	hLoginMapFile = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, LOGIN_FILE_NAME);
+	lpLoginBuffer = (TCHAR(*)[BUFFER_MAX_SIZE])MapViewOfFile(hLoginMapFile, FILE_MAP_ALL_ACCESS, 0, 0, BUFFER_MAX_SIZE);
+
+	hGameMapFile = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, GAME_FILE_NAME);
+	gMappedGame = (game(*))MapViewOfFile(hGameMapFile, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(game));
+
+	hLoggedEvent = CreateEvent(NULL, FALSE, FALSE, TEXT("LoggedEvent"));
+	hReadEvent = CreateEvent(NULL, FALSE, FALSE, TEXT("ReadEvent"));
 }
 
 DWORD WINAPI ReceiveBall(LPVOID lpParam) {
@@ -71,7 +71,7 @@ DWORD WINAPI ReceiveBall(LPVOID lpParam) {
 		}*/
 
 		//(*lpMappedBuffer)[_tcslen((*lpMappedBuffer)) / sizeof(TCHAR)] = '\0';
-		_tprintf(TEXT("[SERVER] Posição da bola: %s\n"), lpMappedBuffer);
+		_tprintf(TEXT("[SERVER] Posição da bola: %s\n"), lpLoginBuffer);
 	}
 
 	return 0;
