@@ -49,8 +49,6 @@ DWORD WINAPI BallThread(LPVOID lpParam) {
 	int x = 1;
 	int y = 1;
 
-	TCHAR message[TAM];
-
 	while (TRUE) {
 		gameData.gameBall.x += x;
 		gameData.gameBall.y += y;

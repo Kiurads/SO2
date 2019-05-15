@@ -43,9 +43,9 @@ int ReceiveBroadcast(void) {
 	return 0;
 }
 int SendMsg(void) {
-	
+	return 0;
 }
 
 int ReceiveMessage(void) {
-	
+	return 0;
 }

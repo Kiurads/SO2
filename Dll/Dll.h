@@ -52,12 +52,13 @@ extern "C"
 {
 	//Variáveis globais da DLL
 	extern DLL_APIS HANDLE hGameMapFile;
-	extern DLL_APIS HANDLE hLoginMapFile;
-	extern DLL_APIS HANDLE hReadEvent;
-	extern DLL_APIS HANDLE hLoggedEvent;
-	extern DLL_APIS HANDLE hLoginPipe;
-	extern DLL_APIS TCHAR(*lpLoginBuffer)[BUFFER_MAX_SIZE];
 	extern DLL_APIS game *gMappedGame;
+	extern DLL_APIS HANDLE hReadEvent;
+	extern DLL_APIS HANDLE hHasReadEvent;
+	extern DLL_APIS HANDLE hLoginMapFile;
+	extern DLL_APIS HANDLE hLoggedEvent;
+	extern DLL_APIS TCHAR(*lpLoginBuffer)[BUFFER_MAX_SIZE];
+	extern DLL_APIS HANDLE hLoginPipe;
 	extern DLL_APIS BOOL success;
 	extern DLL_APIS DWORD nBytes;
 	extern DLL_APIS TCHAR tName[TAM], buffer[BUFFER_MAX_SIZE];
