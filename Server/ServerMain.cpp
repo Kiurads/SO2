@@ -3,13 +3,16 @@
 HKEY hRegKey; //Top 10 stored in registry
 player tpTopTen[TOP], newUser; //Top 10 usernames
 HANDLE hBallThread;
+HANDLE hGameThread;
+HANDLE hBallTimer;
+DWORD dwGameThreadId;
 DWORD dwBallThreadId;
 DWORD dwResult;
 DWORD dwSize;
 game gameData;
+int termina;
 
 int _tmain(int argc, LPTSTR argv) {
-
 #ifdef UNICODE
 	_setmode(_fileno(stdin), _O_WTEXT);
 	_setmode(_fileno(stdout), _O_WTEXT);
@@ -21,6 +24,8 @@ int _tmain(int argc, LPTSTR argv) {
 		_gettchar();
 		exit(-1);
 	}
+	hBallThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)BallThread, NULL, NULL, &dwBallThreadId);
+
 
 	if (setupRegisty() == -1) {
 		_tprintf(TEXT("Erro ao criar/abrir chave (%d)\n"), GetLastError());
@@ -34,55 +39,63 @@ int _tmain(int argc, LPTSTR argv) {
 			break;
 	} while (TRUE);
 
-	hBallThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)BallThread, NULL, NULL, &dwBallThreadId);
-
-	WaitForSingleObject(hBallThread, INFINITE);
+	hGameThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)GameThread, NULL, NULL, &dwGameThreadId);
 
 	_gettchar();
 
-	return 0;
-}
+	termina = 1;
 
-DWORD WINAPI BallThread(LPVOID lpParam) {
-	UNREFERENCED_PARAMETER(lpParam);
-
-	int x = 1;
-	int y = 1;
-
-	while (TRUE) {
-		gameData.gameBall.x += x;
-		gameData.gameBall.y += y;
-
-		if (gameData.gameBall.x == MAX_X || gameData.gameBall.x == 0) x = x * (-1);
-		if (gameData.gameBall.y == MAX_Y || gameData.gameBall.y == 0) y = y * (-1);
-
-		(*gMappedGame) = gameData;
-
-		SetEvent(hReadEvent);
-
-		Sleep(1000);
-	}
+	WaitForSingleObject(hBallThread, INFINITE);
+	WaitForSingleObject(hGameThread, INFINITE);
+	UnmapViewOfFile(lpLoginBuffer);
+	UnmapViewOfFile(gMappedGame);
+	CloseHandle(hGameMapFile);
+	CloseHandle(hReadEvent);
+	CloseHandle(hLoginMutex);
+	CloseHandle(hLoginEvent);
+	CloseHandle(hLoggedEvent);
+	CloseHandle(hReadEvent);
+	CloseHandle(hHasReadEvent);
+	CloseHandle(hBallTimer);
 
 	return 0;
 }
 
 int setupServer() {
-	hReadEvent = CreateEvent(NULL, FALSE, FALSE, TEXT("ReadEvent"));
-
 	hLoginMapFile = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, BUFFER_MAX_SIZE, LOGIN_FILE_NAME);
 	lpLoginBuffer = (TCHAR(*)[BUFFER_MAX_SIZE])MapViewOfFile(hLoginMapFile, FILE_MAP_ALL_ACCESS, 0, 0, BUFFER_MAX_SIZE);
+	hLoginMutex = CreateMutex(NULL, FALSE, LOGIN_MUTEX_NAME);
+	hLoginEvent = CreateEvent(NULL, FALSE, FALSE, LOGIN_EVENT_NAME);
+	hLoggedEvent = CreateEvent(NULL, FALSE, FALSE, LOGGED_EVENT_NAME);
 
 	hGameMapFile = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, BUFFER_MAX_SIZE, GAME_FILE_NAME);
 	gMappedGame = (game(*))MapViewOfFile(hGameMapFile, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(game));
+	hReadEvent = CreateEvent(NULL, FALSE, FALSE, GAME_READ_EVENT);
+	hHasReadEvent = CreateEvent(NULL, FALSE, FALSE, GAME_HAS_READ_EVENT);
+
+	hBallTimer = CreateWaitableTimer(NULL, TRUE, TEXT("BallTimer"));
 
 	gameData.gameBall.x = 0;
 	gameData.gameBall.y = 0;
+	gameData.gameBall.speed = 1;
+
+	gameData.gameBar.pos = MAX_X / 2;
+
+	termina = 0;
 
 	return 0;
 }
 
 int getLogin() {
-	return -1;
+	WaitForSingleObject(hLoginEvent, INFINITE);
+
+	_tcscpy(newUser.tUsername, (*lpLoginBuffer));
+
+	newUser.hiScore = 0;
+
+	SetEvent(hLoggedEvent);
+
+	return 0;
 }
 
 int setupRegisty() {
@@ -169,4 +182,45 @@ int cmpfunc(const void * a, const void * b) {
 	pPlayer y = (pPlayer)b;
 
 	return (x->hiScore - y->hiScore);
+}
+
+DWORD WINAPI BallThread(LPVOID lpArg) {
+	UNREFERENCED_PARAMETER(lpArg);
+
+	LARGE_INTEGER li;
+
+	li.QuadPart = -10000000LL;
+
+	SetWaitableTimer(hBallTimer, &li, 0, NULL, NULL, 0);
+
+	int x = 1;
+	int y = 1;
+
+	while (!termina) {
+		WaitForSingleObject(hBallTimer, INFINITE);
+
+		gameData.gameBall.x += x;
+		gameData.gameBall.y += y;
+
+		if (gameData.gameBall.x == MAX_X || gameData.gameBall.x == 0) x = x * (-1);
+		if (gameData.gameBall.y == MAX_Y || gameData.gameBall.y == 0) y = y * (-1);
+
+		SetWaitableTimer(hBallTimer, &li, 0, NULL, NULL, 0);
+	}
+
+	return 0;
+}
+
+DWORD WINAPI GameThread(LPVOID lpParam) {
+	UNREFERENCED_PARAMETER(lpParam);
+
+	while (!termina) {
+		(*gMappedGame) = gameData;
+
+		SetEvent(hReadEvent);
+
+		WaitForSingleObject(hHasReadEvent, 5000);
+	}
+
+	return 0;
 }

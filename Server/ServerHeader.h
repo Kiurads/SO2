@@ -11,3 +11,4 @@ int setupRegisty();
 int setupServer();
 int cmpfunc(const void * a, const void * b);
 DWORD WINAPI BallThread(LPVOID);
+DWORD WINAPI GameThread(LPVOID);

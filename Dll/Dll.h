@@ -13,7 +13,12 @@
 #define MAX_X 10
 #define MAX_Y 15
 #define LOGIN_FILE_NAME TEXT("LoginFile")
+#define LOGIN_MUTEX_NAME TEXT("LoginMutex")
+#define LOGIN_EVENT_NAME TEXT("LoginEvent")
+#define LOGGED_EVENT_NAME TEXT("LoggedEvent")
 #define GAME_FILE_NAME TEXT("MappedFile")
+#define	GAME_READ_EVENT	TEXT("ReadEvent")
+#define	GAME_HAS_READ_EVENT	TEXT("HasReadEvent")
 #define SERVER_PIPE_NAME TEXT("\\\\.\\pipe\\server")
 #define LOGIN_SUCCESS TEXT("1")
 
@@ -25,6 +30,7 @@ typedef struct {
 typedef struct {
 	int x;
 	int y;
+	int speed;
 } ball;
 
 typedef struct {
@@ -56,8 +62,10 @@ extern "C"
 	extern DLL_APIS HANDLE hReadEvent;
 	extern DLL_APIS HANDLE hHasReadEvent;
 	extern DLL_APIS HANDLE hLoginMapFile;
+	extern DLL_APIS HANDLE hLoginEvent;
 	extern DLL_APIS HANDLE hLoggedEvent;
 	extern DLL_APIS TCHAR(*lpLoginBuffer)[BUFFER_MAX_SIZE];
+	extern DLL_APIS	HANDLE hLoginMutex;
 	extern DLL_APIS HANDLE hLoginPipe;
 	extern DLL_APIS BOOL success;
 	extern DLL_APIS DWORD nBytes;

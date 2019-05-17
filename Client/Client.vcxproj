@@ -26,6 +26,9 @@
       <Project>{756e7cab-d8a7-4b84-abe2-41b73c2b0761}</Project>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ClientHeader.h" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{16C7DA0D-35FA-4119-B30C-F7C08318EC38}</ProjectGuid>

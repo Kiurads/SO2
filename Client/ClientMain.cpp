@@ -1,16 +1,8 @@
-#include <windows.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <tchar.h>
-#include <fcntl.h>
-#include <io.h>
-#include "..\Dll\Dll.h"
+#include "ClientHeader.h"
 
-bool termina = false;
 HANDLE hThread;
-
-DWORD WINAPI ReceiveBall(LPVOID);
-void SetupClient();
+game gameData;
+bool termina = false;
 
 int _tmain(int argc, LPTSTR argv) {
 
@@ -27,15 +19,12 @@ int _tmain(int argc, LPTSTR argv) {
 		exit(-1);
 	}
 
-	hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ReceiveBall, NULL, 0, NULL);
-
-	_gettch();
-
-	termina = TRUE;
+	hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ReceiveGame, NULL, 0, NULL);
 
 	WaitForSingleObject(hThread, INFINITE);
 
 	UnmapViewOfFile(lpLoginBuffer);
+	UnmapViewOfFile(gMappedGame);
 	CloseHandle(hGameMapFile);
 	CloseHandle(hReadEvent);
 	return 0;
@@ -44,15 +33,17 @@ int _tmain(int argc, LPTSTR argv) {
 void SetupClient() {
 	hLoginMapFile = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, LOGIN_FILE_NAME);
 	lpLoginBuffer = (TCHAR(*)[BUFFER_MAX_SIZE])MapViewOfFile(hLoginMapFile, FILE_MAP_ALL_ACCESS, 0, 0, BUFFER_MAX_SIZE);
+	hLoginMutex = CreateMutex(NULL, FALSE, LOGIN_MUTEX_NAME);
+	hLoginEvent = CreateEvent(NULL, FALSE, FALSE, LOGIN_EVENT_NAME);
+	hLoggedEvent = CreateEvent(NULL, FALSE, FALSE, LOGGED_EVENT_NAME);
 
 	hGameMapFile = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, GAME_FILE_NAME);
 	gMappedGame = (game(*))MapViewOfFile(hGameMapFile, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(game));
-
-	hLoggedEvent = CreateEvent(NULL, FALSE, FALSE, TEXT("LoggedEvent"));
-	hReadEvent = CreateEvent(NULL, FALSE, FALSE, TEXT("ReadEvent"));
+	hReadEvent = CreateEvent(NULL, FALSE, FALSE, GAME_READ_EVENT);
+	hHasReadEvent = CreateEvent(NULL, FALSE, FALSE, GAME_HAS_READ_EVENT);
 }
 
-DWORD WINAPI ReceiveBall(LPVOID lpParam) {
+DWORD WINAPI ReceiveGame(LPVOID lpParam) {
 	UNREFERENCED_PARAMETER(lpParam);
 
 	while (!termina) {
@@ -62,16 +53,15 @@ DWORD WINAPI ReceiveBall(LPVOID lpParam) {
 
 		if (dwWaitResult != WAIT_OBJECT_0) {
 			_tprintf(TEXT("[ERRO] Conexão deu timeout\n"));
-			termina = TRUE;
+			break;
 		}
+		else {
+			gameData = (*gMappedGame);
 
-		/*if (!ReadFile(hClientPipe, buffer, sizeof(buffer), &nBytes, NULL)) {
-			_tprintf(TEXT("[ERRO] Erro na leitura de dados do servidor\n"));
-			termina = TRUE;
-		}*/
+			_tprintf(TEXT("[SERVER] Posição da bola (%d, %d)\n"), gameData.gameBall.x, gameData.gameBall.y);
 
-		//(*lpMappedBuffer)[_tcslen((*lpMappedBuffer)) / sizeof(TCHAR)] = '\0';
-		_tprintf(TEXT("[SERVER] Posição da bola: %s\n"), lpLoginBuffer);
+			SetEvent(hHasReadEvent);
+		}
 	}
 
 	return 0;
