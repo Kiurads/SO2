@@ -9,9 +9,11 @@
 
 #define TOP 10
 #define TAM 50
+#define TTAM 100
 #define BUFFER_MAX_SIZE 256
 #define MAX_X 10
 #define MAX_Y 15
+#define	GAME_CHANGED_EVENT_NAME TEXT("ChangeEvent")
 #define LOGIN_FILE_NAME TEXT("LoginFile")
 #define LOGIN_MUTEX_NAME TEXT("LoginMutex")
 #define LOGIN_EVENT_NAME TEXT("LoginEvent")
@@ -25,6 +27,10 @@
 typedef struct {
 	TCHAR tUsername[TAM];
 	int hiScore;
+	HANDLE hReadEvent;
+	HANDLE hHasReadEvent;
+	TCHAR tReadEventName[TTAM];
+	TCHAR tHasReadEventName[TTAM];
 } player, *pPlayer;
 
 typedef struct {
@@ -57,6 +63,7 @@ typedef struct {
 extern "C"
 {
 	//Variáveis globais da DLL
+	extern DLL_APIS HANDLE hGameChangedEvent;
 	extern DLL_APIS HANDLE hGameMapFile;
 	extern DLL_APIS game *gMappedGame;
 	extern DLL_APIS HANDLE hReadEvent;
@@ -73,7 +80,7 @@ extern "C"
 	extern DLL_APIS int iAuthReply;
 
 	//Funções a serem exportadas/importadas
-	DLL_APIS int Login(void);
+	DLL_APIS int Login(pPlayer data);
 	DLL_APIS int ReceiveBroadcast(void);
 	DLL_APIS int SendMsg(void);
 	DLL_APIS int ReceiveMessage(void);

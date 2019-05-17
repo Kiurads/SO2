@@ -1,16 +1,20 @@
 ﻿#include "ServerHeader.h"
 
 HKEY hRegKey; //Top 10 stored in registry
-player tpTopTen[TOP], newUser; //Top 10 usernames
+player tpTopTen[TOP]; //Top 10 usernames
+pPlayer players;
 HANDLE hBallThread;
 HANDLE hGameThread;
+HANDLE hLoginThread;
 HANDLE hBallTimer;
 DWORD dwGameThreadId;
 DWORD dwBallThreadId;
+DWORD dwLoginThreadId;
 DWORD dwResult;
 DWORD dwSize;
 game gameData;
 int termina;
+int nPlayers;
 
 int _tmain(int argc, LPTSTR argv) {
 #ifdef UNICODE
@@ -32,12 +36,7 @@ int _tmain(int argc, LPTSTR argv) {
 		exit(-1);
 	}
 
-	do {
-		if (getLogin() == -1)
-			_tprintf(TEXT("Login inválido por parte de um Cliente\n"));
-		else
-			break;
-	} while (TRUE);
+	hLoginThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)LoginThread, NULL, NULL, &dwLoginThreadId);
 
 	hGameThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)GameThread, NULL, NULL, &dwGameThreadId);
 
@@ -62,6 +61,8 @@ int _tmain(int argc, LPTSTR argv) {
 }
 
 int setupServer() {
+	hGameChangedEvent = CreateEvent(NULL, FALSE, FALSE, GAME_CHANGED_EVENT_NAME);
+
 	hLoginMapFile = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, BUFFER_MAX_SIZE, LOGIN_FILE_NAME);
 	lpLoginBuffer = (TCHAR(*)[BUFFER_MAX_SIZE])MapViewOfFile(hLoginMapFile, FILE_MAP_ALL_ACCESS, 0, 0, BUFFER_MAX_SIZE);
 	hLoginMutex = CreateMutex(NULL, FALSE, LOGIN_MUTEX_NAME);
@@ -73,7 +74,7 @@ int setupServer() {
 	hReadEvent = CreateEvent(NULL, FALSE, FALSE, GAME_READ_EVENT);
 	hHasReadEvent = CreateEvent(NULL, FALSE, FALSE, GAME_HAS_READ_EVENT);
 
-	hBallTimer = CreateWaitableTimer(NULL, TRUE, TEXT("BallTimer"));
+	hBallTimer = CreateWaitableTimer(NULL, TRUE, NULL);
 
 	gameData.gameBall.x = 0;
 	gameData.gameBall.y = 0;
@@ -82,18 +83,7 @@ int setupServer() {
 	gameData.gameBar.pos = MAX_X / 2;
 
 	termina = 0;
-
-	return 0;
-}
-
-int getLogin() {
-	WaitForSingleObject(hLoginEvent, INFINITE);
-
-	_tcscpy(newUser.tUsername, (*lpLoginBuffer));
-
-	newUser.hiScore = 0;
-
-	SetEvent(hLoggedEvent);
+	nPlayers = 0;
 
 	return 0;
 }
@@ -184,6 +174,36 @@ int cmpfunc(const void * a, const void * b) {
 	return (x->hiScore - y->hiScore);
 }
 
+DWORD WINAPI LoginThread(LPVOID lpArg) {
+	UNREFERENCED_PARAMETER(lpArg);
+
+	while (!termina) {
+		WaitForSingleObject(hLoginEvent, INFINITE);
+
+		players = (pPlayer)realloc(players, sizeof(player) * (nPlayers + 1));
+
+		_tcscpy(players[nPlayers].tUsername, (*lpLoginBuffer));
+		players[nPlayers].hiScore = 0;
+
+		_tprintf(TEXT("[LOGIN] O utilizador %s fez login\n"), players[nPlayers].tUsername);
+
+		_tcscpy(players[nPlayers].tReadEventName, GAME_READ_EVENT);
+		_tcscat(players[nPlayers].tReadEventName, players[nPlayers].tUsername);
+
+		_tcscpy(players[nPlayers].tHasReadEventName, GAME_HAS_READ_EVENT);
+		_tcscat(players[nPlayers].tHasReadEventName, players[nPlayers].tUsername);
+
+		players[nPlayers].hReadEvent = CreateEvent(NULL, FALSE, FALSE, players[nPlayers].tReadEventName);
+		players[nPlayers].hHasReadEvent = CreateEvent(NULL, FALSE, FALSE, players[nPlayers].tHasReadEventName);
+
+		nPlayers++;
+
+		SetEvent(hLoggedEvent);
+	}
+
+	return 0;
+}
+
 DWORD WINAPI BallThread(LPVOID lpArg) {
 	UNREFERENCED_PARAMETER(lpArg);
 
@@ -205,6 +225,8 @@ DWORD WINAPI BallThread(LPVOID lpArg) {
 		if (gameData.gameBall.x == MAX_X || gameData.gameBall.x == 0) x = x * (-1);
 		if (gameData.gameBall.y == MAX_Y || gameData.gameBall.y == 0) y = y * (-1);
 
+		SetEvent(hGameChangedEvent);
+
 		SetWaitableTimer(hBallTimer, &li, 0, NULL, NULL, 0);
 	}
 
@@ -214,12 +236,42 @@ DWORD WINAPI BallThread(LPVOID lpArg) {
 DWORD WINAPI GameThread(LPVOID lpParam) {
 	UNREFERENCED_PARAMETER(lpParam);
 
+	DWORD dwWaitResult;
+	int currentPlayers;
+
 	while (!termina) {
+		WaitForSingleObject(hGameChangedEvent, INFINITE);
+
 		(*gMappedGame) = gameData;
 
-		SetEvent(hReadEvent);
+		currentPlayers = nPlayers;
 
-		WaitForSingleObject(hHasReadEvent, 5000);
+		for (int i = 0; i < currentPlayers; i++) {
+			SetEvent(players[i].hReadEvent);
+		}
+
+		for (int i = 0; i < currentPlayers; i++) {
+			dwWaitResult = WaitForSingleObject(players[i].hHasReadEvent, 2500);
+
+			if (dwWaitResult != WAIT_OBJECT_0) {
+				_tprintf(TEXT("[TIMEOUT] O utilizador %s deu timeout\n"), players[i].tUsername);
+
+				CloseHandle(players[i].hReadEvent);
+				CloseHandle(players[i].hHasReadEvent);
+
+				nPlayers--;
+
+				currentPlayers = nPlayers;
+
+				for (int j = i; j < currentPlayers; j++) {
+					players[j] = players[j + 1];
+				}
+
+				players = (pPlayer)realloc(players, sizeof(player) * nPlayers);
+
+				i--;
+			}
+		}
 	}
 
 	return 0;

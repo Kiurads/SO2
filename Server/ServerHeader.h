@@ -6,9 +6,9 @@
 #include <io.h>
 #include "..\Dll\Dll.h"
 
-int getLogin();
 int setupRegisty();
 int setupServer();
 int cmpfunc(const void * a, const void * b);
+DWORD WINAPI LoginThread(LPVOID);
 DWORD WINAPI BallThread(LPVOID);
 DWORD WINAPI GameThread(LPVOID);

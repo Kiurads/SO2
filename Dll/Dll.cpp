@@ -3,8 +3,7 @@
 #include <windows.h>
 #include "Dll.h"
 
-char pointer[4096];
-
+HANDLE hGameChangedEvent;
 HANDLE hGameMapFile;
 game *gMappedGame;
 HANDLE hReadEvent;
@@ -20,7 +19,7 @@ DWORD nBytes;
 TCHAR tName[TAM], buffer[BUFFER_MAX_SIZE];
 int iAuthReply;
 
-int Login(void) {
+int Login(pPlayer data) {
 	DWORD dwWaitResult;
 
 	WaitForSingleObject(hLoginMutex, INFINITE);
@@ -28,22 +27,31 @@ int Login(void) {
 	_tprintf(TEXT(" - Seja bem vindo ao Breakout! - \n"));
 
 	_tprintf(TEXT("Introduza o Username para se autenticar no servidor: \n"));
-	_fgetts(tName, 256, stdin);
+	_fgetts(data->tUsername, 256, stdin);
 
-	tName[_tcslen(tName) - 1] = '\0';
+	data->tUsername[_tcslen(data->tUsername) - 1] = '\0';
 
-	_stprintf((*lpLoginBuffer), TEXT("%s"), tName);
+	_stprintf((*lpLoginBuffer), TEXT("%s"), data->tUsername);
 
 	SetEvent(hLoginEvent);
 
 	dwWaitResult = WaitForSingleObject(hLoggedEvent, 5000);
 
 	if (dwWaitResult != WAIT_OBJECT_0) {
-		_tprintf(TEXT("[ERRO] Conexão deu timeout\n"));
+		_tprintf(TEXT("[ERRO] Login não foi aceite\n"));
 
 		ReleaseMutex(hLoginMutex);
 		return -1;
 	}
+
+	_tcscpy(data->tReadEventName, GAME_READ_EVENT);
+	_tcscat(data->tReadEventName, data->tUsername);
+
+	_tcscpy(data->tHasReadEventName, GAME_HAS_READ_EVENT);
+	_tcscat(data->tHasReadEventName, data->tUsername);
+
+	hReadEvent = CreateEvent(NULL, FALSE, FALSE, data->tReadEventName);
+	hHasReadEvent = CreateEvent(NULL, FALSE, FALSE, data->tHasReadEventName);
 	
 	ReleaseMutex(hLoginMutex);
 	return 0;
