@@ -1,7 +1,7 @@
 ﻿#include "ServerHeader.h"
 
 HKEY hRegKey; //Top 10 stored in registry
-player tpTopTen[TOP]; //Top 10 usernames
+topPlayer tpTopTen[TOP]; //Top 10 usernames
 pPlayer players;
 HANDLE hBallThread;
 HANDLE hGameThread;
@@ -24,15 +24,14 @@ int _tmain(int argc, LPTSTR argv) {
 #endif
 
 	if (setupServer() == -1) {
-		_tprintf(TEXT("Não foi possível criar o pipe do Servidor\n"));
-		_gettchar();
+		_tprintf(TEXT("[ERRO] Não foi possível inicializar o Servidor\n"));
 		exit(-1);
 	}
+
 	hBallThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)BallThread, NULL, NULL, &dwBallThreadId);
 
-
 	if (setupRegisty() == -1) {
-		_tprintf(TEXT("Erro ao criar/abrir chave (%d)\n"), GetLastError());
+		_tprintf(TEXT("[ERRO] Erro ao criar/abrir chave do registo (%d)\n"), GetLastError());
 		exit(-1);
 	}
 
@@ -40,9 +39,11 @@ int _tmain(int argc, LPTSTR argv) {
 
 	hGameThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)GameThread, NULL, NULL, &dwGameThreadId);
 
-	_gettchar();
+	while (!termina) {
+		_tscanf(TEXT("%s"), buffer);
 
-	termina = 1;
+		if (_tcscmp(buffer, TEXT("Sair")) == 0) termina = 1;
+	}
 
 	WaitForSingleObject(hBallThread, INFINITE);
 	WaitForSingleObject(hGameThread, INFINITE);
@@ -82,6 +83,9 @@ int setupServer() {
 
 	gameData.gameBar.pos = MAX_X / 2;
 
+	gameData.isRunning = 0;
+	gameData.points = 0;
+
 	termina = 0;
 	nPlayers = 0;
 
@@ -93,47 +97,7 @@ int setupRegisty() {
 	if (RegCreateKeyEx(HKEY_CURRENT_USER, TEXT("Software\\Breakout"), 0, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hRegKey, &dwResult) != ERROR_SUCCESS) {
 		return -1;
 	}
-	if (dwResult == REG_CREATED_NEW_KEY) {
-		_tprintf(TEXT("Key: HKEY_CURRENT_USER\\Software\\Breakout created\n\n"));
-		_tprintf(TEXT("TOP 10\n\n"));
-
-		for (int i = 0; i < TOP; i++) {
-			TCHAR tPoints[TAM];
-
-			_tprintf(TEXT("Username %d: "), i + 1);
-			_tscanf(TEXT("%49s"), tpTopTen[i].tUsername);
-
-			_tprintf(TEXT("Hi-Score: "));
-			_tscanf(TEXT("%d"), &tpTopTen[i].hiScore);
-
-			_stprintf(tPoints, TEXT("%d"), tpTopTen[i].hiScore);
-
-			RegSetValueEx(hRegKey, tpTopTen[i].tUsername, 0, REG_SZ, (LPBYTE)tPoints, (DWORD)_tcslen(tPoints) * sizeof(TCHAR));
-
-			fflush(stdin);
-		}
-
-		qsort(tpTopTen, TOP, sizeof(player), cmpfunc);
-
-		_tprintf(TEXT("\n"));
-
-		for (int i = 0; i < TOP; i++) {
-			int position;
-			TCHAR tPosition[3];
-
-			position = TOP - i;
-
-			_stprintf(tPosition, TEXT("%d"), position);
-
-			_tprintf(TEXT("%s: %d\n"), tpTopTen[i].tUsername, tpTopTen[i].hiScore);
-
-			//Register positions of the users
-			RegSetValueEx(hRegKey, tPosition, 0, REG_SZ, (LPBYTE)tpTopTen[i].tUsername, (DWORD)_tcslen(tpTopTen[i].tUsername) * sizeof(TCHAR));
-		}
-	}
-	else {
-		_tprintf(TEXT("Key: HKEY_CURRENT_USER\\Software\\Breakout opened\n\n"));
-
+	if (dwResult == REG_OPENED_EXISTING_KEY) {
 		for (int i = 0; i < TOP; i++) {
 			int position;
 			TCHAR tPosition[3];
@@ -157,21 +121,11 @@ int setupRegisty() {
 
 			tpTopTen[i].hiScore = _ttoi(tPoints);
 		}
-
-		for (int i = 0; i < TOP; i++)
-			_tprintf(TEXT("%d - %s: %d\n"), i + 1, tpTopTen[i].tUsername, tpTopTen[i].hiScore);
 	}
 
 	RegCloseKey(hRegKey);
 
 	return 0;
-}
-
-int cmpfunc(const void * a, const void * b) {
-	pPlayer x = (pPlayer)a;
-	pPlayer y = (pPlayer)b;
-
-	return (x->hiScore - y->hiScore);
 }
 
 DWORD WINAPI LoginThread(LPVOID lpArg) {

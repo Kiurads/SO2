@@ -10,7 +10,7 @@
 #define TOP 10
 #define TAM 50
 #define TTAM 100
-#define BUFFER_MAX_SIZE 256
+#define BUFFER_MAX_SIZE 4096
 #define MAX_X 10
 #define MAX_Y 15
 #define	GAME_CHANGED_EVENT_NAME TEXT("ChangeEvent")
@@ -34,6 +34,11 @@ typedef struct {
 } player, *pPlayer;
 
 typedef struct {
+	TCHAR tUsername[TAM];
+	int hiScore;
+} topPlayer;
+
+typedef struct {
 	int x;
 	int y;
 	int speed;
@@ -42,13 +47,13 @@ typedef struct {
 typedef struct {
 	int pos;
 	int size;
-	int speed;
 } bar;
 
 typedef struct {
 	ball gameBall;
 	bar gameBar;
 	int points;
+	int isRunning;
 } game, *pGame;
 
 //Esta macro é definida pelo sistema caso estejamos na DLL (<DLL_IMP>_EXPORTS definida)
