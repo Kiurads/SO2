@@ -11,7 +11,7 @@ HANDLE hHasReadEvent;
 HANDLE hLoginMapFile;
 HANDLE hLoginEvent;
 HANDLE hLoggedEvent;
-TCHAR(*lpLoginBuffer)[BUFFER_MAX_SIZE];
+TCHAR(*lpMessageBuffer)[BUFFER_MAX_SIZE];
 HANDLE hLoginMutex;
 HANDLE hLoginPipe;
 BOOL success;
@@ -22,7 +22,7 @@ int iAuthReply;
 int Login(pPlayer data) {
 	DWORD dwWaitResult;
 
-	WaitForSingleObject(hLoginMutex, INFINITE);
+	WaitForSingleObject(hLoginMutex, INFINITE);	//Wait for the server to allow the login to be done
 
 	_tprintf(TEXT(" - Seja bem vindo ao Breakout! - \n"));
 
@@ -31,7 +31,7 @@ int Login(pPlayer data) {
 
 	data->tUsername[_tcslen(data->tUsername) - 1] = '\0';
 
-	_stprintf((*lpLoginBuffer), TEXT("%s"), data->tUsername);
+	_stprintf((*lpMessageBuffer), TEXT("%s"), data->tUsername);
 
 	SetEvent(hLoginEvent);
 
@@ -56,9 +56,21 @@ int Login(pPlayer data) {
 	ReleaseMutex(hLoginMutex);
 	return 0;
 }
-int ReceiveBroadcast(void) {
+
+int ReceiveBroadcast(pGame gameData) {
+	DWORD dwWaitResult;
+
+	dwWaitResult = WaitForSingleObject(hReadEvent, 5000);	//Wait 5 seconds to get game data
+
+	if (dwWaitResult != WAIT_OBJECT_0)
+		return -1;
+	else
+		(*gameData) = (*gMappedGame);
+
+	SetEvent(hHasReadEvent);	//Signal the server that the info has been read
 	return 0;
 }
+
 int SendMsg(void) {
 	return 0;
 }

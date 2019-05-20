@@ -49,7 +49,7 @@ typedef struct {
 	ball gameBall;
 	bar gameBar;
 	int points;
-} game;
+} game, *pGame;
 
 //Esta macro é definida pelo sistema caso estejamos na DLL (<DLL_IMP>_EXPORTS definida)
 //ou na app (<DLL_IMP>_EXPORTS não definida) onde DLL_IMP é o nome deste projeto
@@ -71,7 +71,7 @@ extern "C"
 	extern DLL_APIS HANDLE hLoginMapFile;
 	extern DLL_APIS HANDLE hLoginEvent;
 	extern DLL_APIS HANDLE hLoggedEvent;
-	extern DLL_APIS TCHAR(*lpLoginBuffer)[BUFFER_MAX_SIZE];
+	extern DLL_APIS TCHAR(*lpMessageBuffer)[BUFFER_MAX_SIZE];
 	extern DLL_APIS	HANDLE hLoginMutex;
 	extern DLL_APIS HANDLE hLoginPipe;
 	extern DLL_APIS BOOL success;
@@ -81,7 +81,7 @@ extern "C"
 
 	//Funções a serem exportadas/importadas
 	DLL_APIS int Login(pPlayer data);
-	DLL_APIS int ReceiveBroadcast(void);
+	DLL_APIS int ReceiveBroadcast(pGame gameData);
 	DLL_APIS int SendMsg(void);
 	DLL_APIS int ReceiveMessage(void);
 }

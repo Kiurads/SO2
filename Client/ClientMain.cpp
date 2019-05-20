@@ -1,30 +1,28 @@
 #include "ClientHeader.h"
 
-HANDLE hThread;
+HANDLE hGameThread;
 game gameData;
 player data;
 bool termina = false;
 
 int _tmain(int argc, LPTSTR argv) {
-
+	SetupClient();
 #ifdef UNICODE
 	_setmode(_fileno(stdin), _O_WTEXT);
 	_setmode(_fileno(stdout), _O_WTEXT);
 	_setmode(_fileno(stderr), _O_WTEXT);
 #endif
 
-	SetupClient();
-
 	if (Login(&data) == -1) {
 		_gettchar();
 		exit(-1);
 	}
 
-	hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ReceiveGame, NULL, 0, NULL);
+	hGameThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ReceiveGame, NULL, 0, NULL);
 
-	WaitForSingleObject(hThread, INFINITE);
+	WaitForSingleObject(hGameThread, INFINITE);
 
-	UnmapViewOfFile(lpLoginBuffer);
+	UnmapViewOfFile(lpMessageBuffer);
 	UnmapViewOfFile(gMappedGame);
 	CloseHandle(hGameMapFile);
 	CloseHandle(hReadEvent);
@@ -41,7 +39,7 @@ void SetupClient() {
 	hGameChangedEvent = CreateEvent(NULL, FALSE, FALSE, GAME_CHANGED_EVENT_NAME);
 
 	hLoginMapFile = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, LOGIN_FILE_NAME);
-	lpLoginBuffer = (TCHAR(*)[BUFFER_MAX_SIZE])MapViewOfFile(hLoginMapFile, FILE_MAP_ALL_ACCESS, 0, 0, BUFFER_MAX_SIZE);
+	lpMessageBuffer = (TCHAR(*)[BUFFER_MAX_SIZE])MapViewOfFile(hLoginMapFile, FILE_MAP_ALL_ACCESS, 0, 0, BUFFER_MAX_SIZE);
 	hLoginMutex = CreateMutex(NULL, FALSE, LOGIN_MUTEX_NAME);
 	hLoginEvent = CreateEvent(NULL, FALSE, FALSE, LOGIN_EVENT_NAME);
 	hLoggedEvent = CreateEvent(NULL, FALSE, FALSE, LOGGED_EVENT_NAME);
@@ -54,21 +52,12 @@ DWORD WINAPI ReceiveGame(LPVOID lpParam) {
 	UNREFERENCED_PARAMETER(lpParam);
 
 	while (!termina) {
-		DWORD dwWaitResult;
-
-		dwWaitResult = WaitForSingleObject(hReadEvent, 10000);
-
-		if (dwWaitResult != WAIT_OBJECT_0) {
-			_tprintf(TEXT("[ERRO] Conexão deu timeout\n"));
+		if (ReceiveBroadcast(&gameData) != 0) {
+			_tprintf(TEXT("[TIMEOUT] A conexão foi perdida\n"));
 			break;
 		}
-		else {
-			gameData = (*gMappedGame);
 
-			_tprintf(TEXT("[SERVER] Posição da bola (%d, %d)\n"), gameData.gameBall.x, gameData.gameBall.y);
-
-			SetEvent(hHasReadEvent);
-		}
+		_tprintf(TEXT("[SERVER] Posição da bola (%d, %d)\n"), gameData.gameBall.x, gameData.gameBall.y);
 	}
 
 	return 0;

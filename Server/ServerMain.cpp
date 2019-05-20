@@ -46,7 +46,7 @@ int _tmain(int argc, LPTSTR argv) {
 
 	WaitForSingleObject(hBallThread, INFINITE);
 	WaitForSingleObject(hGameThread, INFINITE);
-	UnmapViewOfFile(lpLoginBuffer);
+	UnmapViewOfFile(lpMessageBuffer);
 	UnmapViewOfFile(gMappedGame);
 	CloseHandle(hGameMapFile);
 	CloseHandle(hReadEvent);
@@ -64,7 +64,7 @@ int setupServer() {
 	hGameChangedEvent = CreateEvent(NULL, FALSE, FALSE, GAME_CHANGED_EVENT_NAME);
 
 	hLoginMapFile = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, BUFFER_MAX_SIZE, LOGIN_FILE_NAME);
-	lpLoginBuffer = (TCHAR(*)[BUFFER_MAX_SIZE])MapViewOfFile(hLoginMapFile, FILE_MAP_ALL_ACCESS, 0, 0, BUFFER_MAX_SIZE);
+	lpMessageBuffer = (TCHAR(*)[BUFFER_MAX_SIZE])MapViewOfFile(hLoginMapFile, FILE_MAP_ALL_ACCESS, 0, 0, BUFFER_MAX_SIZE);
 	hLoginMutex = CreateMutex(NULL, FALSE, LOGIN_MUTEX_NAME);
 	hLoginEvent = CreateEvent(NULL, FALSE, FALSE, LOGIN_EVENT_NAME);
 	hLoggedEvent = CreateEvent(NULL, FALSE, FALSE, LOGGED_EVENT_NAME);
@@ -182,7 +182,7 @@ DWORD WINAPI LoginThread(LPVOID lpArg) {
 
 		players = (pPlayer)realloc(players, sizeof(player) * (nPlayers + 1));
 
-		_tcscpy(players[nPlayers].tUsername, (*lpLoginBuffer));
+		_tcscpy(players[nPlayers].tUsername, (*lpMessageBuffer));
 		players[nPlayers].hiScore = 0;
 
 		_tprintf(TEXT("[LOGIN] O utilizador %s fez login\n"), players[nPlayers].tUsername);
