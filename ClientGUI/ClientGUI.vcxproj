@@ -76,6 +76,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -121,9 +122,16 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ClientGUI.h" />
+    <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ClientGUIMain.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="ClientGUI.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\..\MEGA\Game Resources\Aseprite\Breakout.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

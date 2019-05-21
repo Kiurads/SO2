@@ -43,6 +43,7 @@ int _tmain(int argc, LPTSTR argv) {
 		_tscanf(TEXT("%s"), buffer);
 
 		if (_tcscmp(buffer, TEXT("Sair")) == 0) termina = 1;
+		if (_tcscmp(buffer, TEXT("cls")) == 0) system("cls");
 	}
 
 	WaitForSingleObject(hBallThread, INFINITE);
@@ -134,25 +135,39 @@ DWORD WINAPI LoginThread(LPVOID lpArg) {
 	while (!termina) {
 		WaitForSingleObject(hLoginEvent, INFINITE);
 
-		players = (pPlayer)realloc(players, sizeof(player) * (nPlayers + 1));
+		int duplicate = 0;
 
-		_tcscpy(players[nPlayers].tUsername, (*lpMessageBuffer));
-		players[nPlayers].hiScore = 0;
+		if (_tcslen((*lpMessageBuffer)) > 0) {
 
-		_tprintf(TEXT("[LOGIN] O utilizador %s fez login\n"), players[nPlayers].tUsername);
+			for (int i = 0; i < nPlayers; i++) {
+				if (_tcscmp((*lpMessageBuffer), players->tUsername) == 0) {
+					duplicate = 1;
+					break;
+				}
+			}
 
-		_tcscpy(players[nPlayers].tReadEventName, GAME_READ_EVENT);
-		_tcscat(players[nPlayers].tReadEventName, players[nPlayers].tUsername);
+			if (!duplicate) {
+				players = (pPlayer)realloc(players, sizeof(player) * (nPlayers + 1));
 
-		_tcscpy(players[nPlayers].tHasReadEventName, GAME_HAS_READ_EVENT);
-		_tcscat(players[nPlayers].tHasReadEventName, players[nPlayers].tUsername);
+				_tcscpy(players[nPlayers].tUsername, (*lpMessageBuffer));
+				players[nPlayers].hiScore = 0;
 
-		players[nPlayers].hReadEvent = CreateEvent(NULL, FALSE, FALSE, players[nPlayers].tReadEventName);
-		players[nPlayers].hHasReadEvent = CreateEvent(NULL, FALSE, FALSE, players[nPlayers].tHasReadEventName);
+				_tprintf(TEXT("[LOGIN] O utilizador %s fez login\n"), players[nPlayers].tUsername);
 
-		nPlayers++;
+				_tcscpy(players[nPlayers].tReadEventName, GAME_READ_EVENT);
+				_tcscat(players[nPlayers].tReadEventName, players[nPlayers].tUsername);
 
-		SetEvent(hLoggedEvent);
+				_tcscpy(players[nPlayers].tHasReadEventName, GAME_HAS_READ_EVENT);
+				_tcscat(players[nPlayers].tHasReadEventName, players[nPlayers].tUsername);
+
+				players[nPlayers].hReadEvent = CreateEvent(NULL, FALSE, FALSE, players[nPlayers].tReadEventName);
+				players[nPlayers].hHasReadEvent = CreateEvent(NULL, FALSE, FALSE, players[nPlayers].tHasReadEventName);
+
+				nPlayers++;
+
+				SetEvent(hLoggedEvent);
+			}
+		}
 	}
 
 	return 0;
@@ -205,7 +220,7 @@ DWORD WINAPI GameThread(LPVOID lpParam) {
 		}
 
 		for (int i = 0; i < currentPlayers; i++) {
-			dwWaitResult = WaitForSingleObject(players[i].hHasReadEvent, 2500);
+			dwWaitResult = WaitForSingleObject(players[i].hHasReadEvent, 5000);
 
 			if (dwWaitResult != WAIT_OBJECT_0) {
 				_tprintf(TEXT("[TIMEOUT] O utilizador %s deu timeout\n"), players[i].tUsername);

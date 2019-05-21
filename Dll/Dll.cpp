@@ -24,22 +24,13 @@ int Login(pPlayer data) {
 
 	WaitForSingleObject(hLoginMutex, INFINITE);	//Wait for the server to allow the login to be done
 
-	_tprintf(TEXT(" - Seja bem vindo ao Breakout! - \n"));
-
-	_tprintf(TEXT("Introduza o Username para se autenticar no servidor: \n"));
-	_fgetts(data->tUsername, 256, stdin);
-
-	data->tUsername[_tcslen(data->tUsername) - 1] = '\0';
-
 	_stprintf((*lpMessageBuffer), TEXT("%s"), data->tUsername);
 
 	SetEvent(hLoginEvent);
 
-	dwWaitResult = WaitForSingleObject(hLoggedEvent, 5000);
+	dwWaitResult = WaitForSingleObject(hLoggedEvent, 1000);
 
 	if (dwWaitResult != WAIT_OBJECT_0) {
-		_tprintf(TEXT("[ERRO] Login não foi aceite\n"));
-
 		ReleaseMutex(hLoginMutex);
 		return -1;
 	}
@@ -79,7 +70,7 @@ int ReceiveMessage(void) {
 	return 0;
 }
 
-void SetupClient() {
+void SetupClient(pPlayer data) {
 	hGameChangedEvent = CreateEvent(NULL, FALSE, FALSE, GAME_CHANGED_EVENT_NAME);
 
 	hLoginMapFile = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, LOGIN_FILE_NAME);
@@ -90,4 +81,18 @@ void SetupClient() {
 
 	hGameMapFile = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, GAME_FILE_NAME);
 	gMappedGame = (game(*))MapViewOfFile(hGameMapFile, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(game));
+
+	memset(data->tUsername, '\0', sizeof(TCHAR) * TAM);
+}
+
+void CloseClient() {
+	UnmapViewOfFile(lpMessageBuffer);
+	UnmapViewOfFile(gMappedGame);
+	CloseHandle(hGameMapFile);
+	CloseHandle(hReadEvent);
+	CloseHandle(hLoginMutex);
+	CloseHandle(hLoginEvent);
+	CloseHandle(hLoggedEvent);
+	CloseHandle(hReadEvent);
+	CloseHandle(hHasReadEvent);
 }
