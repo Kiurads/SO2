@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <io.h>
 #include "..\Dll\Dll.h"
+#include "resource.h"
 
 DWORD WINAPI ReceiveGame(LPVOID);
 void SetupClient();

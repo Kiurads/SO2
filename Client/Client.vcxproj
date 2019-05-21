@@ -28,6 +28,13 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ClientHeader.h" />
+    <ClInclude Include="resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Client.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\..\MEGA\Game Resources\Aseprite\Breakout.ico" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
