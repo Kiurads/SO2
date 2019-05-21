@@ -1,4 +1,4 @@
-#include "ClientHeader.h"
+#include "ClientGUI.h"
 
 HANDLE hGameThread;
 game gameData;
