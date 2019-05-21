@@ -82,7 +82,7 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 		case ID_LOGIN:	//Login
 			memset(tPrintableMessage, '\0', sizeof(TCHAR) * 200);
 
-			DialogBox(NULL, MAKEINTRESOURCE(IDD_DIALOG_LOGIN), hWnd, LoginEventHandler);
+			DialogBox(NULL, MAKEINTRESOURCE(IDD_DIALOG_LOGIN), hWnd, (DLGPROC)LoginEventHandler);
 
 			if (_tcslen(tPrintableMessage) == 0) {
 				MessageBeep(MB_ICONERROR);
@@ -100,7 +100,7 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 			break;
 
 		case ID_SOBRE:	//Sobre
-			DialogBox(NULL, MAKEINTRESOURCE(IDD_DIALOG_ABOUT), hWnd, AboutEventHandler);
+			DialogBox(NULL, MAKEINTRESOURCE(IDD_DIALOG_ABOUT), hWnd, (DLGPROC)AboutEventHandler);
 			break;
 
 		case ID_SAIR:	//Sair
@@ -132,7 +132,7 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 	return(0);
 }
 
-LRESULT LoginEventHandler(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+LRESULT CALLBACK LoginEventHandler(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
 	switch (message) {
 	case WM_COMMAND:
 		if (LOWORD(wParam) == IDOK) {
@@ -161,7 +161,7 @@ LRESULT LoginEventHandler(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	}
 }
 
-LRESULT AboutEventHandler(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+LRESULT CALLBACK AboutEventHandler(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
 	switch (message) {
 	case WM_COMMAND:
 		if (LOWORD(wParam) == IDOK) {
