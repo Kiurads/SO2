@@ -47,7 +47,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmdLine, int nC
 
 	UpdateWindow(hWnd); 
 
-	while (GetMessage(&lpMsg, NULL, 0, 0)) {
+	while (GetMessage(&lpMsg, NULL, 0, 0) && !termina) {
 		TranslateMessage(&lpMsg);
 		DispatchMessage(&lpMsg);
 	}
@@ -66,7 +66,7 @@ DWORD WINAPI ReceiveGame(LPVOID lpParam) {
 	while (!termina) {
 		if (ReceiveBroadcast(&gameData) != 0) {
 			_tprintf(TEXT("[TIMEOUT] A conexão foi perdida\n"));
-			break;
+			termina = 1;
 		}
 	}
 
