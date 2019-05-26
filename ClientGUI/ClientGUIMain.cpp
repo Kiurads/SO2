@@ -108,6 +108,17 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 			value = MessageBox(hWnd, TEXT("Tem a certea que pretende fechar?"), TEXT("Fechar"), MB_ICONQUESTION | MB_YESNO);
 
 			if (value == IDYES)
+				if (_tcslen(data.tUsername) > 0) {
+					WaitForSingleObject(hMessageMutex, INFINITE);
+
+					_stprintf((*lpMessageBuffer)[0], EXIT);
+					_stprintf((*lpMessageBuffer)[1], data.tUsername);
+
+					SetEvent(hMessageEvent);
+
+					ReleaseMutex(hMessageMutex);
+				}
+
 				DestroyWindow(hWnd);
 			break;
 		}
@@ -118,6 +129,17 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 		value = MessageBox(hWnd, TEXT("Tem a certea que pretende fechar?"), TEXT("Fechar"), MB_ICONQUESTION | MB_YESNO);
 
 		if (value == IDYES)
+			if (_tcslen(data.tUsername) > 0) {
+				WaitForSingleObject(hMessageMutex, INFINITE);
+
+				_stprintf((*lpMessageBuffer)[0], EXIT);
+				_stprintf((*lpMessageBuffer)[1], data.tUsername);
+
+				SetEvent(hMessageEvent);
+
+				ReleaseMutex(hMessageMutex);
+			}
+
 			DestroyWindow(hWnd);
 		break;
 
@@ -138,8 +160,10 @@ LRESULT CALLBACK LoginEventHandler(HWND hWnd, UINT message, WPARAM wParam, LPARA
 		if (LOWORD(wParam) == IDOK) {
 			GetDlgItemText(hWnd, IDC_USERNAME, data.tUsername, TAM);
 
-			if(Login(&data) == 0 && _tcslen(data.tUsername) > 0)
+			if (Login(&data) == 0 && _tcslen(data.tUsername) > 0)
 				_stprintf(tPrintableMessage, TEXT("Bem-vindo/a ao Breakout, %s!"), data.tUsername);
+			else
+				memset(data.tUsername, '\0', sizeof(data.tUsername));
 
 			EndDialog(hWnd, 0);
 			return TRUE;

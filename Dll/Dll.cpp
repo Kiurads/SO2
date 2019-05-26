@@ -8,11 +8,11 @@ HANDLE hGameMapFile;
 game *gMappedGame;
 HANDLE hReadEvent;
 HANDLE hHasReadEvent;
-HANDLE hLoginMapFile;
-HANDLE hLoginEvent;
+HANDLE hMessageMapFile;
+HANDLE hMessageEvent;
 HANDLE hLoggedEvent;
-TCHAR(*lpMessageBuffer)[BUFFER_MAX_SIZE];
-HANDLE hLoginMutex;
+TCHAR(*lpMessageBuffer)[2][BUFFER_MAX_SIZE];
+HANDLE hMessageMutex;
 HANDLE hLoginPipe;
 BOOL success;
 DWORD nBytes;
@@ -22,16 +22,17 @@ int iAuthReply;
 int Login(pPlayer data) {
 	DWORD dwWaitResult;
 
-	WaitForSingleObject(hLoginMutex, INFINITE);	//Wait for the server to allow the login to be done
+	WaitForSingleObject(hMessageMutex, INFINITE);	//Wait for the server to allow the login to be done
 
-	_stprintf((*lpMessageBuffer), TEXT("%s"), data->tUsername);
+	_stprintf((*lpMessageBuffer)[0], TEXT("%s"), LOGIN);
+	_stprintf((*lpMessageBuffer)[1], TEXT("%s"), data->tUsername);
 
-	SetEvent(hLoginEvent);
+	SetEvent(hMessageEvent);
 
 	dwWaitResult = WaitForSingleObject(hLoggedEvent, 1000);
 
 	if (dwWaitResult != WAIT_OBJECT_0) {
-		ReleaseMutex(hLoginMutex);
+		ReleaseMutex(hMessageMutex);
 		return -1;
 	}
 
@@ -44,7 +45,7 @@ int Login(pPlayer data) {
 	hReadEvent = CreateEvent(NULL, FALSE, FALSE, data->tReadEventName);
 	hHasReadEvent = CreateEvent(NULL, FALSE, FALSE, data->tHasReadEventName);
 	
-	ReleaseMutex(hLoginMutex);
+	ReleaseMutex(hMessageMutex);
 	return 0;
 }
 
@@ -73,10 +74,10 @@ int ReceiveMessage(void) {
 void SetupClient(pPlayer data) {
 	hGameChangedEvent = CreateEvent(NULL, FALSE, FALSE, GAME_CHANGED_EVENT_NAME);
 
-	hLoginMapFile = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, LOGIN_FILE_NAME);
-	lpMessageBuffer = (TCHAR(*)[BUFFER_MAX_SIZE])MapViewOfFile(hLoginMapFile, FILE_MAP_ALL_ACCESS, 0, 0, BUFFER_MAX_SIZE);
-	hLoginMutex = CreateMutex(NULL, FALSE, LOGIN_MUTEX_NAME);
-	hLoginEvent = CreateEvent(NULL, FALSE, FALSE, LOGIN_EVENT_NAME);
+	hMessageMapFile = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, MESSAGE_FILE_NAME);
+	lpMessageBuffer = (TCHAR(*)[2][BUFFER_MAX_SIZE])MapViewOfFile(hMessageMapFile, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(TCHAR[2][BUFFER_MAX_SIZE]));
+	hMessageMutex = CreateMutex(NULL, FALSE, MESSAGE_MUTEX_NAME);
+	hMessageEvent = CreateEvent(NULL, FALSE, FALSE, LOGIN_EVENT_NAME);
 	hLoggedEvent = CreateEvent(NULL, FALSE, FALSE, LOGGED_EVENT_NAME);
 
 	hGameMapFile = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, GAME_FILE_NAME);
@@ -90,8 +91,8 @@ void CloseClient() {
 	UnmapViewOfFile(gMappedGame);
 	CloseHandle(hGameMapFile);
 	CloseHandle(hReadEvent);
-	CloseHandle(hLoginMutex);
-	CloseHandle(hLoginEvent);
+	CloseHandle(hMessageMutex);
+	CloseHandle(hMessageEvent);
 	CloseHandle(hLoggedEvent);
 	CloseHandle(hReadEvent);
 	CloseHandle(hHasReadEvent);

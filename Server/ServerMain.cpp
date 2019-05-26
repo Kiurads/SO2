@@ -5,7 +5,7 @@ topPlayer tpTopTen[TOP]; //Top 10 usernames
 pPlayer players;
 HANDLE hBallThread;
 HANDLE hGameThread;
-HANDLE hLoginThread;
+HANDLE hMessageThread;
 HANDLE hBallTimer;
 DWORD dwGameThreadId;
 DWORD dwBallThreadId;
@@ -35,8 +35,7 @@ int _tmain(int argc, LPTSTR argv) {
 		exit(-1);
 	}
 
-	hLoginThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)LoginThread, NULL, NULL, &dwLoginThreadId);
-
+	hMessageThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MessageThread, NULL, NULL, &dwLoginThreadId);
 	hGameThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)GameThread, NULL, NULL, &dwGameThreadId);
 
 	while (!termina) {
@@ -52,8 +51,8 @@ int _tmain(int argc, LPTSTR argv) {
 	UnmapViewOfFile(gMappedGame);
 	CloseHandle(hGameMapFile);
 	CloseHandle(hReadEvent);
-	CloseHandle(hLoginMutex);
-	CloseHandle(hLoginEvent);
+	CloseHandle(hMessageMutex);
+	CloseHandle(hMessageEvent);
 	CloseHandle(hLoggedEvent);
 	CloseHandle(hReadEvent);
 	CloseHandle(hHasReadEvent);
@@ -65,10 +64,10 @@ int _tmain(int argc, LPTSTR argv) {
 int setupServer() {
 	hGameChangedEvent = CreateEvent(NULL, FALSE, FALSE, GAME_CHANGED_EVENT_NAME);
 
-	hLoginMapFile = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, BUFFER_MAX_SIZE, LOGIN_FILE_NAME);
-	lpMessageBuffer = (TCHAR(*)[BUFFER_MAX_SIZE])MapViewOfFile(hLoginMapFile, FILE_MAP_ALL_ACCESS, 0, 0, BUFFER_MAX_SIZE);
-	hLoginMutex = CreateMutex(NULL, FALSE, LOGIN_MUTEX_NAME);
-	hLoginEvent = CreateEvent(NULL, FALSE, FALSE, LOGIN_EVENT_NAME);
+	hMessageMapFile = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, sizeof(TCHAR[2][BUFFER_MAX_SIZE]), MESSAGE_FILE_NAME);
+	lpMessageBuffer = (TCHAR(*)[2][BUFFER_MAX_SIZE])MapViewOfFile(hMessageMapFile, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(TCHAR[2][BUFFER_MAX_SIZE]));
+	hMessageMutex = CreateMutex(NULL, FALSE, MESSAGE_MUTEX_NAME);
+	hMessageEvent = CreateEvent(NULL, FALSE, FALSE, LOGIN_EVENT_NAME);
 	hLoggedEvent = CreateEvent(NULL, FALSE, FALSE, LOGGED_EVENT_NAME);
 
 	hGameMapFile = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, BUFFER_MAX_SIZE, GAME_FILE_NAME);
@@ -129,43 +128,64 @@ int setupRegisty() {
 	return 0;
 }
 
-DWORD WINAPI LoginThread(LPVOID lpArg) {
+DWORD WINAPI MessageThread(LPVOID lpArg) {
 	UNREFERENCED_PARAMETER(lpArg);
 
 	while (!termina) {
-		WaitForSingleObject(hLoginEvent, INFINITE);
+		WaitForSingleObject(hMessageEvent, INFINITE);
 
-		int duplicate = 0;
+		if (_tcscmp((*lpMessageBuffer)[0], LOGIN) == 0) {	//Login
+			int duplicate = 0;
 
-		if (_tcslen((*lpMessageBuffer)) > 0) {
+			if (_tcslen((*lpMessageBuffer)[1]) > 0) {
 
-			for (int i = 0; i < nPlayers; i++) {
-				if (_tcscmp((*lpMessageBuffer), players->tUsername) == 0) {
-					duplicate = 1;
-					break;
+				for (int i = 0; i < nPlayers; i++) {
+					if (_tcscmp((*lpMessageBuffer)[1], players->tUsername) == 0) {
+						duplicate = 1;
+						break;
+					}
+				}
+
+				if (!duplicate) {
+					players = (pPlayer)realloc(players, sizeof(player) * (nPlayers + 1));
+
+					_tcscpy(players[nPlayers].tUsername, (*lpMessageBuffer)[1]);
+					players[nPlayers].hiScore = 0;
+
+					_tprintf(TEXT("[LOGIN] O utilizador %s fez login\n"), players[nPlayers].tUsername);
+
+					_tcscpy(players[nPlayers].tReadEventName, GAME_READ_EVENT);
+					_tcscat(players[nPlayers].tReadEventName, players[nPlayers].tUsername);
+
+					_tcscpy(players[nPlayers].tHasReadEventName, GAME_HAS_READ_EVENT);
+					_tcscat(players[nPlayers].tHasReadEventName, players[nPlayers].tUsername);
+
+					players[nPlayers].hReadEvent = CreateEvent(NULL, FALSE, FALSE, players[nPlayers].tReadEventName);
+					players[nPlayers].hHasReadEvent = CreateEvent(NULL, FALSE, FALSE, players[nPlayers].tHasReadEventName);
+
+					nPlayers++;
+
+					SetEvent(hLoggedEvent);
 				}
 			}
+		}
 
-			if (!duplicate) {
-				players = (pPlayer)realloc(players, sizeof(player) * (nPlayers + 1));
+		if (_tcscmp((*lpMessageBuffer)[0], EXIT) == 0) {
+			for (int i = 0; i < nPlayers; i++) {
+				if (_tcscmp((*lpMessageBuffer)[1], players->tUsername) == 0) {
+					_tprintf(TEXT("[LOGOUT] O utilizador %s fez logout\n"), players[i].tUsername);
 
-				_tcscpy(players[nPlayers].tUsername, (*lpMessageBuffer));
-				players[nPlayers].hiScore = 0;
+					CloseHandle(players[i].hReadEvent);
+					CloseHandle(players[i].hHasReadEvent);
 
-				_tprintf(TEXT("[LOGIN] O utilizador %s fez login\n"), players[nPlayers].tUsername);
+					nPlayers--;
 
-				_tcscpy(players[nPlayers].tReadEventName, GAME_READ_EVENT);
-				_tcscat(players[nPlayers].tReadEventName, players[nPlayers].tUsername);
+					for (int j = i; j < nPlayers; j++) {
+						players[j] = players[j + 1];
+					}
 
-				_tcscpy(players[nPlayers].tHasReadEventName, GAME_HAS_READ_EVENT);
-				_tcscat(players[nPlayers].tHasReadEventName, players[nPlayers].tUsername);
-
-				players[nPlayers].hReadEvent = CreateEvent(NULL, FALSE, FALSE, players[nPlayers].tReadEventName);
-				players[nPlayers].hHasReadEvent = CreateEvent(NULL, FALSE, FALSE, players[nPlayers].tHasReadEventName);
-
-				nPlayers++;
-
-				SetEvent(hLoggedEvent);
+					players = (pPlayer)realloc(players, sizeof(player) * nPlayers);
+				}
 			}
 		}
 	}

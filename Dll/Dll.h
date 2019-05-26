@@ -14,14 +14,16 @@
 #define MAX_X 10
 #define MAX_Y 15
 #define	GAME_CHANGED_EVENT_NAME TEXT("ChangeEvent")
-#define LOGIN_FILE_NAME TEXT("LoginFile")
-#define LOGIN_MUTEX_NAME TEXT("LoginMutex")
+#define MESSAGE_FILE_NAME TEXT("MessageFile")
+#define MESSAGE_MUTEX_NAME TEXT("MessageMutex")
 #define LOGIN_EVENT_NAME TEXT("LoginEvent")
 #define LOGGED_EVENT_NAME TEXT("LoggedEvent")
 #define GAME_FILE_NAME TEXT("MappedFile")
 #define	GAME_READ_EVENT	TEXT("ReadEvent")
 #define	GAME_HAS_READ_EVENT	TEXT("HasReadEvent")
 #define SERVER_PIPE_NAME TEXT("\\\\.\\pipe\\server")
+#define LOGIN TEXT("Login")
+#define EXIT TEXT("Exit")
 #define LOGIN_SUCCESS TEXT("1")
 
 typedef struct {
@@ -73,11 +75,11 @@ extern "C"
 	extern DLL_APIS game *gMappedGame;
 	extern DLL_APIS HANDLE hReadEvent;
 	extern DLL_APIS HANDLE hHasReadEvent;
-	extern DLL_APIS HANDLE hLoginMapFile;
-	extern DLL_APIS HANDLE hLoginEvent;
+	extern DLL_APIS HANDLE hMessageMapFile;
+	extern DLL_APIS HANDLE hMessageEvent;
 	extern DLL_APIS HANDLE hLoggedEvent;
-	extern DLL_APIS TCHAR(*lpMessageBuffer)[BUFFER_MAX_SIZE];
-	extern DLL_APIS	HANDLE hLoginMutex;
+	extern DLL_APIS TCHAR(*lpMessageBuffer)[2][BUFFER_MAX_SIZE];
+	extern DLL_APIS	HANDLE hMessageMutex;
 	extern DLL_APIS HANDLE hLoginPipe;
 	extern DLL_APIS BOOL success;
 	extern DLL_APIS DWORD nBytes;

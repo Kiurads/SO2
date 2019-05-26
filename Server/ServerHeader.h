@@ -8,6 +8,6 @@
 
 int setupRegisty();
 int setupServer();
-DWORD WINAPI LoginThread(LPVOID);
+DWORD WINAPI MessageThread(LPVOID);
 DWORD WINAPI BallThread(LPVOID);
 DWORD WINAPI GameThread(LPVOID);
