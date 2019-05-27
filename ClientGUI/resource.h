@@ -7,6 +7,17 @@
 #define IDD_DIALOG_LOGIN                105
 #define IDI_ICON1                       107
 #define IDI_ICON_BREAKOUT               107
+#define IDI_ICON2                       108
+#define IDI_ICON3                       109
+#define IDI_ICON4                       110
+#define IDB_BITMAP_BAR                  113
+#define IDB_BITMAP_BALL                 114
+#define IDB_BITMAP_RED_BRICK            115
+#define IDB_BITMAP_GREEN_BRICK          116
+#define IDB_BITMAP_ORANGE_BRICK         117
+#define IDB_BITMAP_BLUE_BRICK           118
+#define IDB_BITMAP1                     119
+#define IDB_BITMAP_PINK_BRICK           119
 #define IDC_EDIT1                       1001
 #define IDC_USERNAME                    1001
 #define ID_LOGIN                        40001
@@ -18,7 +29,7 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        108
+#define _APS_NEXT_RESOURCE_VALUE        120
 #define _APS_NEXT_COMMAND_VALUE         40005
 #define _APS_NEXT_CONTROL_VALUE         1002
 #define _APS_NEXT_SYMED_VALUE           101

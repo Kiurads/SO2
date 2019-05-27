@@ -36,7 +36,25 @@
     <Image Include="Breakout.ico">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="icon1.ico">
+    <Image Include="Breakout_bar.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="Breakout_ball.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="Breakout_red_brick.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="Breakout_green_brick.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="Breakout_orange_brick.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="Breakout_blue_brick.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="Breakout_pink_brick.bmp">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>

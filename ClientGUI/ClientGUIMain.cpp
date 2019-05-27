@@ -108,16 +108,8 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 			value = MessageBox(hWnd, TEXT("Tem a certea que pretende fechar?"), TEXT("Fechar"), MB_ICONQUESTION | MB_YESNO);
 
 			if (value == IDYES)
-				if (_tcslen(data.tUsername) > 0) {
-					WaitForSingleObject(hMessageMutex, INFINITE);
-
-					_stprintf((*lpMessageBuffer)[0], EXIT);
-					_stprintf((*lpMessageBuffer)[1], data.tUsername);
-
-					SetEvent(hMessageEvent);
-
-					ReleaseMutex(hMessageMutex);
-				}
+				if (_tcslen(data.tUsername) > 0)
+					SendMsg(data, (TCHAR*)EXIT);
 
 				DestroyWindow(hWnd);
 			break;
@@ -129,16 +121,8 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 		value = MessageBox(hWnd, TEXT("Tem a certea que pretende fechar?"), TEXT("Fechar"), MB_ICONQUESTION | MB_YESNO);
 
 		if (value == IDYES)
-			if (_tcslen(data.tUsername) > 0) {
-				WaitForSingleObject(hMessageMutex, INFINITE);
-
-				_stprintf((*lpMessageBuffer)[0], EXIT);
-				_stprintf((*lpMessageBuffer)[1], data.tUsername);
-
-				SetEvent(hMessageEvent);
-
-				ReleaseMutex(hMessageMutex);
-			}
+			if (_tcslen(data.tUsername) > 0)
+				SendMsg(data, (TCHAR*)EXIT);
 
 			DestroyWindow(hWnd);
 		break;

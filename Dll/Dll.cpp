@@ -63,7 +63,15 @@ int ReceiveBroadcast(pGame gameData) {
 	return 0;
 }
 
-int SendMsg(void) {
+int SendMsg(player data, TCHAR *msg) {
+	WaitForSingleObject(hMessageMutex, INFINITE);
+
+	_stprintf((*lpMessageBuffer)[0], msg);
+	_stprintf((*lpMessageBuffer)[1], data.tUsername);
+
+	SetEvent(hMessageEvent);
+
+	ReleaseMutex(hMessageMutex);
 	return 0;
 }
 

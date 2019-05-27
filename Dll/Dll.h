@@ -89,7 +89,7 @@ extern "C"
 	//Funções a serem exportadas/importadas
 	DLL_APIS int Login(pPlayer data);
 	DLL_APIS int ReceiveBroadcast(pGame gameData);
-	DLL_APIS int SendMsg(void);
+	DLL_APIS int SendMsg(player data, TCHAR *msg);
 	DLL_APIS int ReceiveMessage(void);
 	DLL_APIS void SetupClient(pPlayer data);
 	DLL_APIS void CloseClient(void);
