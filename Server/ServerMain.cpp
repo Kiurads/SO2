@@ -237,7 +237,7 @@ DWORD WINAPI BallThread(LPVOID lpArg) {
 		if (gameData.gameBall.y == 0) y = y * (-1);
 		if (gameData.gameBall.y >= gameData.max_y - 8) gameData.gameBall.y = 0;
 		if (gameData.gameBall.y == gameData.max_y - 16 &&
-			gameData.gameBar.pos <= gameData.gameBall.x - 8 &&
+			gameData.gameBar.pos <= gameData.gameBall.x + 8 &&
 			gameData.gameBar.pos + 32 >= gameData.gameBall.x) y = y * (-1);
 
 		SetEvent(hGameChangedEvent);

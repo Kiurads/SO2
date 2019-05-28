@@ -22,7 +22,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmdLine, int nC
 	HWND hWnd;
 	MSG lpMsg;
 	WNDCLASSEX wcApp;
-	
+
 	wcApp.cbSize = sizeof(WNDCLASSEX);
 	wcApp.hInstance = hInst;
 	wcApp.lpszClassName = szProgName;
@@ -30,7 +30,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmdLine, int nC
 
 	wcApp.style = CS_HREDRAW | CS_VREDRAW;
 
-	wcApp.hIcon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_ICON_BREAKOUT));	
+	wcApp.hIcon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_ICON_BREAKOUT));
 
 	wcApp.hIconSm = LoadIcon(hInst, MAKEINTRESOURCE(IDI_ICON_BREAKOUT));
 
@@ -44,10 +44,10 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmdLine, int nC
 		return(0);
 
 	hWnd = CreateWindow(szProgName, TEXT("Breakout - Client"), WS_OVERLAPPEDWINDOW, 0, 0, 640, 360, (HWND)HWND_DESKTOP, (HMENU)NULL, (HINSTANCE)hInst, 0);
-	
+
 	ShowWindow(hWnd, nCmdShow);
 
-	UpdateWindow(hWnd); 
+	UpdateWindow(hWnd);
 
 	hWnd_global = hWnd;
 
@@ -71,7 +71,8 @@ DWORD WINAPI ReceiveGame(LPVOID lpParam) {
 		if (ReceiveBroadcast(&gameData) != 0) {
 			_tprintf(TEXT("[TIMEOUT] A conexão foi perdida\n"));
 			termina = 1;
-		} else
+		}
+		else
 			InvalidateRect(hWnd_global, NULL, TRUE);
 	}
 
@@ -109,7 +110,7 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 
 		DeleteObject(hBit);
 
-		hBrush = CreateSolidBrush(RGB(153, 204, 255));
+		hBrush = CreateSolidBrush(RGB(255, 255, 255));
 
 		SelectObject(memDC, hBrush);
 		PatBlt(memDC, 0, 0, maxX, maxY, PATCOPY);
@@ -130,10 +131,20 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 			barDC = CreateCompatibleDC(memDC);
 			ballDC = CreateCompatibleDC(memDC);
 
+			RECT rcBack;
+
+			rcBack.left = 0;
+			rcBack.top = 0;
+			rcBack.right = gameData.max_x;
+			rcBack.bottom = gameData.max_y;
+
+			hBrush = CreateSolidBrush(RGB(51, 255, 102));
+
 			SelectObject(barDC, hBmpBar);  // colocar bitmap no DC
 			SelectObject(ballDC, hBmpBall);  // colocar bitmap no DC
 			PatBlt(memDC, 0, 0, maxX, maxY, PATCOPY);
 
+			FillRect(memDC, &rcBack, hBrush);
 			BitBlt(memDC, gameData.gameBar.pos, gameData.max_y - 8, bmpBar.bmWidth, bmpBar.bmHeight, barDC, 0, 0, SRCCOPY);
 			BitBlt(memDC, gameData.gameBall.x, gameData.gameBall.y, bmpBall.bmWidth, bmpBall.bmHeight, ballDC, 0, 0, SRCAND);
 
@@ -184,11 +195,12 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 			MessageBeep(MB_ICONQUESTION);
 			value = MessageBox(hWnd, TEXT("Tem a certea que pretende fechar?"), TEXT("Fechar"), MB_ICONQUESTION | MB_YESNO);
 
-			if (value == IDYES)
+			if (value == IDYES) {
 				if (_tcslen(data.tUsername) > 0)
 					SendMsg(data, (TCHAR*)EXIT);
 
 				DestroyWindow(hWnd);
+			}
 			break;
 		}
 		break;
@@ -217,11 +229,12 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 		MessageBeep(MB_ICONQUESTION);
 		value = MessageBox(hWnd, TEXT("Tem a certea que pretende fechar?"), TEXT("Fechar"), MB_ICONQUESTION | MB_YESNO);
 
-		if (value == IDYES)
+		if (value == IDYES) {
 			if (_tcslen(data.tUsername) > 0)
 				SendMsg(data, (TCHAR*)EXIT);
 
 			DestroyWindow(hWnd);
+		}
 		break;
 
 	case WM_DESTROY:
