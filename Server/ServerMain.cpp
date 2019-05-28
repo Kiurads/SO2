@@ -85,6 +85,8 @@ int setupServer() {
 
 	gameData.isRunning = 0;
 	gameData.points = 0;
+	gameData.max_x = MAX_X;
+	gameData.max_y = MAX_Y;
 
 	termina = 0;
 	nPlayers = 0;
@@ -170,7 +172,7 @@ DWORD WINAPI MessageThread(LPVOID lpArg) {
 			}
 		}
 
-		if (_tcscmp((*lpMessageBuffer)[0], EXIT) == 0) {
+		if (_tcscmp((*lpMessageBuffer)[0], EXIT) == 0) {	//Logout
 			for (int i = 0; i < nPlayers; i++) {
 				if (_tcscmp((*lpMessageBuffer)[1], players->tUsername) == 0) {
 					_tprintf(TEXT("[LOGOUT] O utilizador %s fez logout\n"), players[i].tUsername);
@@ -188,6 +190,26 @@ DWORD WINAPI MessageThread(LPVOID lpArg) {
 				}
 			}
 		}
+
+		if (_tcscmp((*lpMessageBuffer)[0], LEFT) == 0) {
+			if (gameData.gameBar.pos > 0) {
+				gameData.gameBar.pos--;
+
+				SetEvent(hGameChangedEvent);
+
+				_tprintf(TEXT("[MOVIMENTO] O utilizador %s moveu a barra para a esquerda\n"), (*lpMessageBuffer)[1]);
+			}
+		}
+
+		if (_tcscmp((*lpMessageBuffer)[0], RIGHT) == 0) {
+			if (gameData.gameBar.pos + 32 < MAX_X) {
+				gameData.gameBar.pos++;
+
+				SetEvent(hGameChangedEvent);
+
+				_tprintf(TEXT("[MOVIMENTO] O utilizador %s moveu a barra para a direita\n"), (*lpMessageBuffer)[1]);
+			}
+		}
 	}
 
 	return 0;
@@ -198,7 +220,7 @@ DWORD WINAPI BallThread(LPVOID lpArg) {
 
 	LARGE_INTEGER li;
 
-	li.QuadPart = -10000000LL;
+	li.QuadPart = -1000000LL;
 
 	SetWaitableTimer(hBallTimer, &li, 0, NULL, NULL, 0);
 
@@ -211,8 +233,12 @@ DWORD WINAPI BallThread(LPVOID lpArg) {
 		gameData.gameBall.x += x;
 		gameData.gameBall.y += y;
 
-		if (gameData.gameBall.x == MAX_X || gameData.gameBall.x == 0) x = x * (-1);
-		if (gameData.gameBall.y == MAX_Y || gameData.gameBall.y == 0) y = y * (-1);
+		if (gameData.gameBall.x == gameData.max_x - 8 || gameData.gameBall.x == 0) x = x * (-1);
+		if (gameData.gameBall.y == 0) y = y * (-1);
+		if (gameData.gameBall.y >= gameData.max_y - 8) gameData.gameBall.y = 0;
+		if (gameData.gameBall.y == gameData.max_y - 16 &&
+			gameData.gameBar.pos <= gameData.gameBall.x - 8 &&
+			gameData.gameBar.pos + 32 >= gameData.gameBall.x) y = y * (-1);
 
 		SetEvent(hGameChangedEvent);
 

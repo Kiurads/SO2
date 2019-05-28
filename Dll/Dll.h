@@ -7,22 +7,34 @@
 //Definir uma constante para facilitar a leitura do prot�tipo da fun��o
 //Este .h deve ser inclu�do no projeto que o vai usar (modo impl�cito)
 
+//Zona de dados do jogo
 #define TOP 10
+#define MAX_X 320
+#define MAX_Y 200
+
+//Zona de tamanhos para buffers
 #define TAM 50
 #define TTAM 100
 #define BUFFER_MAX_SIZE 4096
-#define MAX_X 10
-#define MAX_Y 15
+
+//Zona de nomes para eventos
 #define	GAME_CHANGED_EVENT_NAME TEXT("ChangeEvent")
-#define MESSAGE_FILE_NAME TEXT("MessageFile")
-#define MESSAGE_MUTEX_NAME TEXT("MessageMutex")
 #define LOGIN_EVENT_NAME TEXT("LoginEvent")
 #define LOGGED_EVENT_NAME TEXT("LoggedEvent")
-#define GAME_FILE_NAME TEXT("MappedFile")
 #define	GAME_READ_EVENT	TEXT("ReadEvent")
 #define	GAME_HAS_READ_EVENT	TEXT("HasReadEvent")
-#define SERVER_PIPE_NAME TEXT("\\\\.\\pipe\\server")
+
+//Zona para nomes de mapped files
+#define MESSAGE_FILE_NAME TEXT("MessageFile")
+#define GAME_FILE_NAME TEXT("MappedFile")
+
+//Zona para nomes de mutexes
+#define MESSAGE_MUTEX_NAME TEXT("MessageMutex")
+
+//Zona para mensagens
 #define LOGIN TEXT("Login")
+#define	LEFT TEXT("Left")
+#define RIGHT TEXT("Right")
 #define EXIT TEXT("Exit")
 #define LOGIN_SUCCESS TEXT("1")
 
@@ -56,6 +68,8 @@ typedef struct {
 	bar gameBar;
 	int points;
 	int isRunning;
+	int	max_x;
+	int max_y;
 } game, *pGame;
 
 //Esta macro é definida pelo sistema caso estejamos na DLL (<DLL_IMP>_EXPORTS definida)

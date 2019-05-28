@@ -5,6 +5,8 @@ game gameData;
 player data;
 bool termina = false;
 
+HWND hWnd_global = NULL;
+
 TCHAR szProgName[TAM] = TEXT("Breakout - Client");
 
 TCHAR tPrintableMessage[200];
@@ -20,7 +22,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmdLine, int nC
 	HWND hWnd;
 	MSG lpMsg;
 	WNDCLASSEX wcApp;
-
+	
 	wcApp.cbSize = sizeof(WNDCLASSEX);
 	wcApp.hInstance = hInst;
 	wcApp.lpszClassName = szProgName;
@@ -47,6 +49,8 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmdLine, int nC
 
 	UpdateWindow(hWnd); 
 
+	hWnd_global = hWnd;
+
 	while (GetMessage(&lpMsg, NULL, 0, 0) && !termina) {
 		TranslateMessage(&lpMsg);
 		DispatchMessage(&lpMsg);
@@ -67,16 +71,89 @@ DWORD WINAPI ReceiveGame(LPVOID lpParam) {
 		if (ReceiveBroadcast(&gameData) != 0) {
 			_tprintf(TEXT("[TIMEOUT] A conexão foi perdida\n"));
 			termina = 1;
-		}
+		} else
+			InvalidateRect(hWnd_global, NULL, TRUE);
 	}
 
 	return 0;
 }
 
+int maxX = 0, maxY = 0;
+TCHAR frase[200];
+HDC barDC, ballDC, memDC;
+HBITMAP hBit;
+HBITMAP hBmpBar;
+HBITMAP hBmpBall;
+BITMAP bmpBar;
+BITMAP bmpBall;
+
 LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
 	int value;
+	RECT rect;
+	HDC hdc;
+	PAINTSTRUCT ps;
+	HBRUSH hBrush;
 
 	switch (message) {
+	case WM_CREATE:
+		maxX = GetSystemMetrics(SM_CXSCREEN);
+		maxY = GetSystemMetrics(SM_CYSCREEN);
+
+		hdc = GetDC(hWnd);
+
+		memDC = CreateCompatibleDC(hdc);
+
+		hBit = CreateCompatibleBitmap(hdc, maxX, maxY);
+
+		SelectObject(memDC, hBit);
+
+		DeleteObject(hBit);
+
+		hBrush = CreateSolidBrush(RGB(153, 204, 255));
+
+		SelectObject(memDC, hBrush);
+		PatBlt(memDC, 0, 0, maxX, maxY, PATCOPY);
+
+		ReleaseDC(hWnd, hdc);
+
+		hBmpBar = (HBITMAP)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_BITMAP_BAR), IMAGE_BITMAP, 0, 0, LR_DEFAULTSIZE);
+		hBmpBall = (HBITMAP)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_BITMAP_BALL), IMAGE_BITMAP, 0, 0, LR_DEFAULTSIZE);
+
+		//hBmp = (HBITMAP) LoadImage(NULL, TEXT("cavaleiro.bmp"),...,LR_LOADFROMFILE);
+
+		GetObject(hBmpBar, sizeof(bmpBar), &bmpBar);
+		GetObject(hBmpBall, sizeof(bmpBall), &bmpBall);
+		break;
+
+	case WM_PAINT:
+		if (_tcslen(data.tUsername) > 0) {
+			barDC = CreateCompatibleDC(memDC);
+			ballDC = CreateCompatibleDC(memDC);
+
+			SelectObject(barDC, hBmpBar);  // colocar bitmap no DC
+			SelectObject(ballDC, hBmpBall);  // colocar bitmap no DC
+			PatBlt(memDC, 0, 0, maxX, maxY, PATCOPY);
+
+			BitBlt(memDC, gameData.gameBar.pos, gameData.max_y - 8, bmpBar.bmWidth, bmpBar.bmHeight, barDC, 0, 0, SRCCOPY);
+			BitBlt(memDC, gameData.gameBall.x, gameData.gameBall.y, bmpBall.bmWidth, bmpBall.bmHeight, ballDC, 0, 0, SRCAND);
+
+			DeleteDC(barDC);
+			DeleteDC(ballDC);
+		}
+
+		GetClientRect(hWnd, &rect);
+		SetTextColor(memDC, RGB(255, 255, 255));
+		SetBkMode(memDC, TRANSPARENT);
+		rect.left = 0;
+		rect.top = 0;
+
+		hdc = BeginPaint(hWnd, &ps);
+
+		BitBlt(hdc, 0, 0, maxX, maxY, memDC, 0, 0, SRCCOPY);
+
+		EndPaint(hWnd, &ps);
+		break;
+
 	case WM_COMMAND:
 		switch (LOWORD(wParam)) {
 		case ID_LOGIN:	//Login
@@ -116,6 +193,26 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 		}
 		break;
 
+	case WM_KEYDOWN:
+		if (_tcslen(data.tUsername) > 0) {
+			switch (LOWORD(wParam)) {
+			case VK_LEFT:
+				SendMsg(data, (TCHAR*)LEFT);
+				InvalidateRect(hWnd, NULL, TRUE);
+				break;
+
+			case VK_RIGHT:
+				SendMsg(data, (TCHAR*)RIGHT);
+				InvalidateRect(hWnd, NULL, TRUE);
+				break;
+			}
+		}
+		break;
+
+	case WM_ERASEBKGND:
+		return(1); // Prevent erasing the background to reduce flickering
+		break;
+
 	case WM_CLOSE:
 		MessageBeep(MB_ICONQUESTION);
 		value = MessageBox(hWnd, TEXT("Tem a certea que pretende fechar?"), TEXT("Fechar"), MB_ICONQUESTION | MB_YESNO);
@@ -144,8 +241,11 @@ LRESULT CALLBACK LoginEventHandler(HWND hWnd, UINT message, WPARAM wParam, LPARA
 		if (LOWORD(wParam) == IDOK) {
 			GetDlgItemText(hWnd, IDC_USERNAME, data.tUsername, TAM);
 
-			if (Login(&data) == 0 && _tcslen(data.tUsername) > 0)
+			if (Login(&data) == 0 && _tcslen(data.tUsername) > 0) {
 				_stprintf(tPrintableMessage, TEXT("Bem-vindo/a ao Breakout, %s!"), data.tUsername);
+
+				hGameThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ReceiveGame, NULL, 0, NULL);
+			}
 			else
 				memset(data.tUsername, '\0', sizeof(data.tUsername));
 
