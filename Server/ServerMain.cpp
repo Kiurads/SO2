@@ -13,6 +13,8 @@ DWORD dwLoginThreadId;
 DWORD dwResult;
 DWORD dwSize;
 game gameData;
+
+LARGE_INTEGER li;
 int termina;
 int nPlayers;
 
@@ -91,9 +93,8 @@ int setupServer() {
 
 	hBallTimer = CreateWaitableTimer(NULL, TRUE, NULL);
 
-	gameData.gameBall.x = 0;
-	gameData.gameBall.y = 0;
 	gameData.gameBall.speed = 1;
+	gameData.gameBall.isMoving = 0;
 
 	gameData.gameBar.pos = MAX_X / 2;
 
@@ -209,6 +210,9 @@ DWORD WINAPI MessageThread(LPVOID lpArg) {
 			if (gameData.gameBar.pos > 0) {
 				gameData.gameBar.pos--;
 
+				if (!gameData.gameBall.isMoving) 
+					gameData.gameBall.x--;
+
 				SetEvent(hGameChangedEvent);
 			}
 		}
@@ -216,6 +220,17 @@ DWORD WINAPI MessageThread(LPVOID lpArg) {
 		if (_tcscmp((*lpMessageBuffer)[0], RIGHT) == 0) {
 			if (gameData.gameBar.pos + 32 < MAX_X) {
 				gameData.gameBar.pos++;
+
+				if (!gameData.gameBall.isMoving)
+					gameData.gameBall.x++;
+
+				SetEvent(hGameChangedEvent);
+			}
+		}
+
+		if (_tcscmp((*lpMessageBuffer)[0], SPACE) == 0) {
+			if (!gameData.gameBall.isMoving) {
+				gameData.gameBall.isMoving = 1;
 
 				SetEvent(hGameChangedEvent);
 			}
@@ -228,26 +243,43 @@ DWORD WINAPI MessageThread(LPVOID lpArg) {
 DWORD WINAPI BallThread(LPVOID lpArg) {
 	UNREFERENCED_PARAMETER(lpArg);
 
-	LARGE_INTEGER li;
-
-	li.QuadPart = -1000000LL;
+	li.QuadPart = -500000LL;
 
 	SetWaitableTimer(hBallTimer, &li, 0, NULL, NULL, 0);
 
-	int x = 1;
-	int y = 1;
+	gameData.gameBall.hspeed = 1;
+	gameData.gameBall.vspeed = -1;
+
+	gameData.gameBall.y = gameData.max_y - 16;
+	gameData.gameBall.x = gameData.gameBar.pos + 12;
 
 	while (gameData.isRunning && !termina) {
 		WaitForSingleObject(hBallTimer, INFINITE);
 
-		gameData.gameBall.x += x;
-		gameData.gameBall.y += y;
+		if (gameData.gameBall.isMoving) {
+			gameData.gameBall.x += gameData.gameBall.hspeed;
+			gameData.gameBall.y += gameData.gameBall.vspeed;
 
-		//Section for collision detection
-		if (gameData.gameBall.x == gameData.max_x - 8 || gameData.gameBall.x == 0) x = x * (-1);
-		if (gameData.gameBall.y == 0) y = y * (-1);
-		if (gameData.gameBall.y >= gameData.max_y - 8) gameData.gameBall.y = 0;
-		if (gameData.gameBall.y == gameData.max_y - 16 && gameData.gameBar.pos <= gameData.gameBall.x + 8 && gameData.gameBar.pos + 32 >= gameData.gameBall.x) y = y * (-1);
+			//Section for collision detection
+			if (gameData.gameBall.x == gameData.max_x - 8 || gameData.gameBall.x == 0) 
+				gameData.gameBall.hspeed = gameData.gameBall.hspeed * (-1);
+
+			if (gameData.gameBall.y == 0) 
+				gameData.gameBall.vspeed = gameData.gameBall.vspeed * (-1);
+			
+			if (gameData.gameBall.y >= gameData.max_y - 8) {
+				gameData.gameBall.y = gameData.max_y - 16;
+				gameData.gameBall.x = gameData.gameBar.pos + 12;
+
+				gameData.gameBall.hspeed = 1;
+				gameData.gameBall.vspeed = -1;
+
+				gameData.gameBall.isMoving = 0;
+			}
+			
+			if (gameData.gameBall.y == gameData.max_y - 16 && gameData.gameBar.pos <= gameData.gameBall.x + 8 && gameData.gameBar.pos + 32 >= gameData.gameBall.x) 
+				gameData.gameBall.vspeed = gameData.gameBall.vspeed * (-1);
+		}
 
 		SetEvent(hGameChangedEvent);
 

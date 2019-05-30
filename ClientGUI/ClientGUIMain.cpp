@@ -230,6 +230,11 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 				SendMsg(data, (TCHAR*)RIGHT);
 				InvalidateRect(hWnd, NULL, TRUE);
 				break;
+
+			case VK_SPACE:
+				SendMsg(data, (TCHAR*)SPACE);
+				InvalidateRect(hWnd, NULL, TRUE);
+				break;
 			}
 		}
 		break;

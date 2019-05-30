@@ -35,6 +35,7 @@
 #define LOGIN TEXT("Login")
 #define	LEFT TEXT("Left")
 #define RIGHT TEXT("Right")
+#define SPACE TEXT("Space")
 #define EXIT TEXT("Exit")
 #define LOGIN_SUCCESS TEXT("1")
 
@@ -54,8 +55,11 @@ typedef struct {
 
 typedef struct {
 	int x;
+	int hspeed;
 	int y;
+	int vspeed;
 	int speed;
+	int	isMoving;
 } ball;
 
 typedef struct {
