@@ -52,9 +52,9 @@ int Login(pPlayer data) {
 int ReceiveBroadcast(pGame gameData) {
 	DWORD dwWaitResult;
 
-	dwWaitResult = WaitForSingleObject(hReadEvent, 5000);	//Wait 5 seconds to get game data
+	dwWaitResult = WaitForSingleObject(hReadEvent, 1000);
 
-	if (dwWaitResult != WAIT_OBJECT_0)
+	if (dwWaitResult == WAIT_FAILED)
 		return -1;
 	else
 		(*gameData) = (*gMappedGame);
@@ -79,7 +79,7 @@ int ReceiveMessage(void) {
 	return 0;
 }
 
-void SetupClient(pPlayer data) {
+void SetupClient(pPlayer data, pGame gameData) {
 	hGameChangedEvent = CreateEvent(NULL, FALSE, FALSE, GAME_CHANGED_EVENT_NAME);
 
 	hMessageMapFile = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, MESSAGE_FILE_NAME);
@@ -90,6 +90,17 @@ void SetupClient(pPlayer data) {
 
 	hGameMapFile = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, GAME_FILE_NAME);
 	gMappedGame = (game(*))MapViewOfFile(hGameMapFile, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(game));
+
+	gameData->gameBall.x = 0;
+	gameData->gameBall.y = 0;
+	gameData->gameBall.speed = 1;
+
+	gameData->gameBar.pos = MAX_X / 2;
+
+	gameData->isRunning = 0;
+	gameData->points = 0;
+	gameData->max_x = MAX_X;
+	gameData->max_y = MAX_Y;
 
 	memset(data->tUsername, '\0', sizeof(TCHAR) * TAM);
 }

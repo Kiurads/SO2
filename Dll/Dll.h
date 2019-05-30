@@ -105,6 +105,6 @@ extern "C"
 	DLL_APIS int ReceiveBroadcast(pGame gameData);
 	DLL_APIS int SendMsg(player data, TCHAR *msg);
 	DLL_APIS int ReceiveMessage(void);
-	DLL_APIS void SetupClient(pPlayer data);
+	DLL_APIS void SetupClient(pPlayer data, pGame gameData);
 	DLL_APIS void CloseClient(void);
 }

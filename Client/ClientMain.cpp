@@ -11,7 +11,7 @@ int _tmain(int argc, LPTSTR argv) {
 	_setmode(_fileno(stdout), _O_WTEXT);
 	_setmode(_fileno(stderr), _O_WTEXT);
 #endif
-	SetupClient(&data);
+	SetupClient(&data, &gameData);
 
 	if (Login(&data) == -1) {
 		_gettchar();

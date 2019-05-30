@@ -132,6 +132,7 @@
     <ResourceCompile Include="ClientGUI.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="Breakout_loading.bmp" />
     <Image Include="Breakout_pink_brick.bmp" />
     <Image Include="Breakout_blue_brick.bmp" />
     <Image Include="Breakout_orange_brick.bmp" />

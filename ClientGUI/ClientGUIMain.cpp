@@ -1,6 +1,6 @@
 #include "ClientGUI.h"
 
-HANDLE hGameThread;
+HANDLE hGameThread = NULL;
 game gameData;
 player data;
 bool termina = false;
@@ -17,7 +17,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmdLine, int nC
 	_setmode(_fileno(stdout), _O_WTEXT);
 	_setmode(_fileno(stderr), _O_WTEXT);
 #endif
-	SetupClient(&data);
+	SetupClient(&data, &gameData);
 
 	HWND hWnd;
 	MSG lpMsg;
@@ -58,7 +58,8 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmdLine, int nC
 
 	termina = 1;
 
-	WaitForSingleObject(hGameThread, INFINITE);
+	if(hGameThread != NULL)
+		WaitForSingleObject(hGameThread, INFINITE);
 
 	CloseClient();
 	return((int)lpMsg.wParam);
@@ -81,12 +82,14 @@ DWORD WINAPI ReceiveGame(LPVOID lpParam) {
 
 int maxX = 0, maxY = 0;
 TCHAR frase[200];
-HDC barDC, ballDC, memDC;
+HDC barDC, ballDC, loadingDC, memDC;
 HBITMAP hBit;
 HBITMAP hBmpBar;
 HBITMAP hBmpBall;
+HBITMAP hBmpLoading;
 BITMAP bmpBar;
 BITMAP bmpBall;
+BITMAP bmpLoading;
 
 LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
 	int value;
@@ -105,7 +108,7 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 		memDC = CreateCompatibleDC(hdc);
 
 		hBit = CreateCompatibleBitmap(hdc, maxX, maxY);
-
+		
 		SelectObject(memDC, hBit);
 
 		DeleteObject(hBit);
@@ -119,18 +122,15 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 
 		hBmpBar = (HBITMAP)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_BITMAP_BAR), IMAGE_BITMAP, 0, 0, LR_DEFAULTSIZE);
 		hBmpBall = (HBITMAP)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_BITMAP_BALL), IMAGE_BITMAP, 0, 0, LR_DEFAULTSIZE);
-
-		//hBmp = (HBITMAP) LoadImage(NULL, TEXT("cavaleiro.bmp"),...,LR_LOADFROMFILE);
+		hBmpLoading = (HBITMAP)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_BITMAP_LOADING), IMAGE_BITMAP, 0, 0, LR_DEFAULTSIZE);
 
 		GetObject(hBmpBar, sizeof(bmpBar), &bmpBar);
 		GetObject(hBmpBall, sizeof(bmpBall), &bmpBall);
+		GetObject(hBmpLoading, sizeof(bmpLoading), &bmpLoading);
 		break;
 
 	case WM_PAINT:
 		if (_tcslen(data.tUsername) > 0) {
-			barDC = CreateCompatibleDC(memDC);
-			ballDC = CreateCompatibleDC(memDC);
-
 			RECT rcBack;
 
 			rcBack.left = 0;
@@ -138,18 +138,31 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 			rcBack.right = gameData.max_x;
 			rcBack.bottom = gameData.max_y;
 
-			hBrush = CreateSolidBrush(RGB(51, 255, 102));
-
-			SelectObject(barDC, hBmpBar);  // colocar bitmap no DC
-			SelectObject(ballDC, hBmpBall);  // colocar bitmap no DC
+			hBrush = CreateSolidBrush(RGB(120, 120, 120));
 			PatBlt(memDC, 0, 0, maxX, maxY, PATCOPY);
 
 			FillRect(memDC, &rcBack, hBrush);
-			BitBlt(memDC, gameData.gameBar.pos, gameData.max_y - 8, bmpBar.bmWidth, bmpBar.bmHeight, barDC, 0, 0, SRCCOPY);
-			BitBlt(memDC, gameData.gameBall.x, gameData.gameBall.y, bmpBall.bmWidth, bmpBall.bmHeight, ballDC, 0, 0, SRCAND);
 
-			DeleteDC(barDC);
-			DeleteDC(ballDC);
+			if (gameData.isRunning) {
+				barDC = CreateCompatibleDC(memDC);
+				ballDC = CreateCompatibleDC(memDC);
+
+				SelectObject(barDC, hBmpBar);  // colocar bitmap no DC
+				SelectObject(ballDC, hBmpBall);  // colocar bitmap no DC
+				BitBlt(memDC, gameData.gameBar.pos, gameData.max_y - 8, bmpBar.bmWidth, bmpBar.bmHeight, barDC, 0, 0, SRCCOPY);
+				BitBlt(memDC, gameData.gameBall.x, gameData.gameBall.y, bmpBall.bmWidth, bmpBall.bmHeight, ballDC, 0, 0, SRCAND);
+
+				DeleteDC(barDC);
+				DeleteDC(ballDC);
+			}
+			else {
+				loadingDC = CreateCompatibleDC(memDC);
+
+				SelectObject(loadingDC, hBmpLoading);  // colocar bitmap no DC
+				BitBlt(memDC, ((gameData.max_x - bmpLoading.bmWidth) / 2), 32, bmpLoading.bmWidth, bmpLoading.bmHeight, loadingDC, 0, 0, SRCCOPY);
+
+				DeleteDC(loadingDC);
+			}
 		}
 
 		GetClientRect(hWnd, &rect);
@@ -258,6 +271,7 @@ LRESULT CALLBACK LoginEventHandler(HWND hWnd, UINT message, WPARAM wParam, LPARA
 				_stprintf(tPrintableMessage, TEXT("Bem-vindo/a ao Breakout, %s!"), data.tUsername);
 
 				hGameThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ReceiveGame, NULL, 0, NULL);
+				InvalidateRect(hWnd_global, NULL, TRUE);
 			}
 			else
 				memset(data.tUsername, '\0', sizeof(data.tUsername));

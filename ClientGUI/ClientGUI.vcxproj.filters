@@ -57,5 +57,8 @@
     <Image Include="Breakout_pink_brick.bmp">
       <Filter>Resource Files</Filter>
     </Image>
+    <Image Include="Breakout_loading.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>

@@ -28,8 +28,6 @@ int _tmain(int argc, LPTSTR argv) {
 		exit(-1);
 	}
 
-	hBallThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)BallThread, NULL, NULL, &dwBallThreadId);
-
 	if (setupRegisty() == -1) {
 		_tprintf(TEXT("[ERRO] Erro ao criar/abrir chave do registo (%d)\n"), GetLastError());
 		exit(-1);
@@ -41,7 +39,23 @@ int _tmain(int argc, LPTSTR argv) {
 	while (!termina) {
 		_tscanf(TEXT("%s"), buffer);
 
-		if (_tcscmp(buffer, TEXT("Sair")) == 0) termina = 1;
+		if (_tcscmp(buffer, TEXT("Start")) == 0) {
+			if (gameData.isRunning)
+				_tprintf(TEXT("[ERRO] Já está a decorrer um jogo\n"));
+			else {
+				gameData.isRunning = 1;
+
+				SetEvent(hGameChangedEvent);
+
+				hBallThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)BallThread, NULL, NULL, &dwBallThreadId);
+			}
+		}
+
+		if (_tcscmp(buffer, TEXT("Sair")) == 0) {
+			termina = 1;
+			gameData.isRunning = 0;
+		}
+
 		if (_tcscmp(buffer, TEXT("cls")) == 0) system("cls");
 	}
 
@@ -196,8 +210,6 @@ DWORD WINAPI MessageThread(LPVOID lpArg) {
 				gameData.gameBar.pos--;
 
 				SetEvent(hGameChangedEvent);
-
-				_tprintf(TEXT("[MOVIMENTO] O utilizador %s moveu a barra para a esquerda\n"), (*lpMessageBuffer)[1]);
 			}
 		}
 
@@ -206,8 +218,6 @@ DWORD WINAPI MessageThread(LPVOID lpArg) {
 				gameData.gameBar.pos++;
 
 				SetEvent(hGameChangedEvent);
-
-				_tprintf(TEXT("[MOVIMENTO] O utilizador %s moveu a barra para a direita\n"), (*lpMessageBuffer)[1]);
 			}
 		}
 	}
@@ -227,18 +237,17 @@ DWORD WINAPI BallThread(LPVOID lpArg) {
 	int x = 1;
 	int y = 1;
 
-	while (!termina) {
+	while (gameData.isRunning && !termina) {
 		WaitForSingleObject(hBallTimer, INFINITE);
 
 		gameData.gameBall.x += x;
 		gameData.gameBall.y += y;
 
+		//Section for collision detection
 		if (gameData.gameBall.x == gameData.max_x - 8 || gameData.gameBall.x == 0) x = x * (-1);
 		if (gameData.gameBall.y == 0) y = y * (-1);
 		if (gameData.gameBall.y >= gameData.max_y - 8) gameData.gameBall.y = 0;
-		if (gameData.gameBall.y == gameData.max_y - 16 &&
-			gameData.gameBar.pos <= gameData.gameBall.x + 8 &&
-			gameData.gameBar.pos + 32 >= gameData.gameBall.x) y = y * (-1);
+		if (gameData.gameBall.y == gameData.max_y - 16 && gameData.gameBar.pos <= gameData.gameBall.x + 8 && gameData.gameBar.pos + 32 >= gameData.gameBall.x) y = y * (-1);
 
 		SetEvent(hGameChangedEvent);
 
