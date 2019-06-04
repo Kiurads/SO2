@@ -218,7 +218,7 @@ DWORD WINAPI MessageThread(LPVOID lpArg) {
 		}
 
 		if (_tcscmp((*lpMessageBuffer)[0], RIGHT) == 0) {
-			if (gameData.gameBar.pos + 32 < MAX_X) {
+			if (gameData.gameBar.pos + IMAGE_WIDTH < MAX_X) {
 				gameData.gameBar.pos++;
 
 				if (!gameData.gameBall.isMoving)
@@ -250,8 +250,8 @@ DWORD WINAPI BallThread(LPVOID lpArg) {
 	gameData.gameBall.hspeed = 1;
 	gameData.gameBall.vspeed = -1;
 
-	gameData.gameBall.y = gameData.max_y - 16;
-	gameData.gameBall.x = gameData.gameBar.pos + 12;
+	gameData.gameBall.y = gameData.max_y - (IMAGE_HEIGHT * 2);
+	gameData.gameBall.x = gameData.gameBar.pos + (IMAGE_WIDTH /2 - IMAGE_HEIGHT/2);
 
 	while (gameData.isRunning && !termina) {
 		WaitForSingleObject(hBallTimer, INFINITE);
@@ -261,15 +261,15 @@ DWORD WINAPI BallThread(LPVOID lpArg) {
 			gameData.gameBall.y += gameData.gameBall.vspeed;
 
 			//Section for collision detection
-			if (gameData.gameBall.x == gameData.max_x - 8 || gameData.gameBall.x == 0) 
+			if (gameData.gameBall.x == gameData.max_x - IMAGE_HEIGHT || gameData.gameBall.x == 0) 
 				gameData.gameBall.hspeed = gameData.gameBall.hspeed * (-1);
 
 			if (gameData.gameBall.y == 0) 
 				gameData.gameBall.vspeed = gameData.gameBall.vspeed * (-1);
 			
-			if (gameData.gameBall.y >= gameData.max_y - 8) {
-				gameData.gameBall.y = gameData.max_y - 16;
-				gameData.gameBall.x = gameData.gameBar.pos + 12;
+			if (gameData.gameBall.y >= gameData.max_y - IMAGE_HEIGHT) {
+				gameData.gameBall.y = gameData.max_y - (IMAGE_HEIGHT * 2);
+				gameData.gameBall.x = gameData.gameBar.pos + (IMAGE_WIDTH / 2 - IMAGE_HEIGHT / 2);
 
 				gameData.gameBall.hspeed = 1;
 				gameData.gameBall.vspeed = -1;
@@ -277,7 +277,7 @@ DWORD WINAPI BallThread(LPVOID lpArg) {
 				gameData.gameBall.isMoving = 0;
 			}
 			
-			if (gameData.gameBall.y == gameData.max_y - 16 && gameData.gameBar.pos <= gameData.gameBall.x + 8 && gameData.gameBar.pos + 32 >= gameData.gameBall.x) 
+			if (gameData.gameBall.y == gameData.max_y - (IMAGE_HEIGHT * 2) && gameData.gameBar.pos <= gameData.gameBall.x + IMAGE_HEIGHT && gameData.gameBar.pos + IMAGE_WIDTH >= gameData.gameBall.x)
 				gameData.gameBall.vspeed = gameData.gameBall.vspeed * (-1);
 		}
 

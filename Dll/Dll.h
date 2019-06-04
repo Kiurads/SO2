@@ -12,6 +12,9 @@
 #define MAX_X 320
 #define MAX_Y 200
 
+#define IMAGE_HEIGHT 8
+#define IMAGE_WIDTH 32
+
 //Zona de tamanhos para buffers
 #define TAM 50
 #define TTAM 100
@@ -68,8 +71,16 @@ typedef struct {
 } bar;
 
 typedef struct {
+	int xInicial, yInicial;
+	int xFinal, yFinal;
+	int life;
+	BOOL hasBonus;
+} brick;
+
+typedef struct {
 	ball gameBall;
 	bar gameBar;
+	brick bricks[TAM];
 	int points;
 	int isRunning;
 	int	max_x;
