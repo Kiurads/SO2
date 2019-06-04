@@ -11,11 +11,31 @@
 #define TOP 10
 #define MAX_X 320
 #define MAX_Y 200
+#define MAX_BRIX_WIDTH 10
+#define MAX_BRIX_HEIGHT 10
 
 //Zona de tamanhos para buffers
 #define TAM 50
 #define TTAM 100
 #define BUFFER_MAX_SIZE 4096
+
+#define IMAGE_WIDTH 32
+#define IMAGE_HEIGHT 8
+#define BALL_WIDTH 8
+#define BALL_HEIGHT 8
+
+#define BRICK_ONE 1
+#define BRICK_POINTS 10
+#define BRICK_TWO 2
+#define BRICK_THREE 3
+#define BRICK_FOUR 4
+
+
+#define GREEN_BRICK 0
+#define BLUE_BRICK 1
+#define RED_BRICK 2
+#define PINK_BRICK 3
+#define ORANGE_BRICK 4
 
 //Zona de nomes para eventos
 #define	GAME_CHANGED_EVENT_NAME TEXT("ChangeEvent")
@@ -68,8 +88,17 @@ typedef struct {
 } bar;
 
 typedef struct {
+	int posx, posy;
+	int health;
+	int isSpecial;
+	int points;
+	int dying;
+} brick;
+
+typedef struct {
 	ball gameBall;
 	bar gameBar;
+	brick brix[MAX_BRIX_HEIGHT][MAX_BRIX_WIDTH];
 	int points;
 	int isRunning;
 	int	max_x;

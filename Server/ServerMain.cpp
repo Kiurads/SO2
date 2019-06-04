@@ -25,6 +25,8 @@ int _tmain(int argc, LPTSTR argv) {
 	_setmode(_fileno(stderr), _O_WTEXT);
 #endif
 
+	srand((unsigned)time(NULL));
+
 	if (setupServer() == -1) {
 		_tprintf(TEXT("[ERRO] Não foi possível inicializar o Servidor\n"));
 		exit(-1);
@@ -102,6 +104,43 @@ int setupServer() {
 	gameData.points = 0;
 	gameData.max_x = MAX_X;
 	gameData.max_y = MAX_Y;
+
+
+	for (int i = 0; i < MAX_BRIX_HEIGHT; i++) {
+		for (int j = 0; j < MAX_BRIX_WIDTH; j++) {
+			int res = rand() % 2;
+			int health = rand() % (4 + 1 - 2) + 2;
+
+			gameData.brix[i][j].dying = 0;
+
+			gameData.brix[i][j].posx = j * IMAGE_WIDTH;
+			gameData.brix[i][j].posy = i * IMAGE_HEIGHT;
+			gameData.brix[i][j].health = BRICK_ONE;
+			gameData.brix[i][j].isSpecial = FALSE;
+			gameData.brix[i][j].points = BRICK_POINTS;
+
+			switch (res) {
+			case 0:
+				switch (health) {
+				case 2:
+					gameData.brix[i][j].health = BRICK_TWO;
+					break;
+				case 3:
+					gameData.brix[i][j].health = BRICK_THREE;
+					break;
+				case 4:
+					gameData.brix[i][j].health = BRICK_FOUR;
+					break;
+				}
+				break;
+			case 1:
+				res = rand() % 10;
+				if(res == 0)
+					gameData.brix[i][j].isSpecial = TRUE;
+				break;
+			}
+		}
+	}
 
 	termina = 0;
 	nPlayers = 0;
@@ -218,7 +257,7 @@ DWORD WINAPI MessageThread(LPVOID lpArg) {
 		}
 
 		if (_tcscmp((*lpMessageBuffer)[0], RIGHT) == 0) {
-			if (gameData.gameBar.pos + 32 < MAX_X) {
+			if (gameData.gameBar.pos + IMAGE_WIDTH < MAX_X) {
 				gameData.gameBar.pos++;
 
 				if (!gameData.gameBall.isMoving)
@@ -243,17 +282,18 @@ DWORD WINAPI MessageThread(LPVOID lpArg) {
 DWORD WINAPI BallThread(LPVOID lpArg) {
 	UNREFERENCED_PARAMETER(lpArg);
 
-	li.QuadPart = -500000LL;
+	li.QuadPart = -400000LL;
 
 	SetWaitableTimer(hBallTimer, &li, 0, NULL, NULL, 0);
 
 	gameData.gameBall.hspeed = 1;
 	gameData.gameBall.vspeed = -1;
 
-	gameData.gameBall.y = gameData.max_y - 16;
-	gameData.gameBall.x = gameData.gameBar.pos + 12;
+	gameData.gameBall.y = gameData.max_y - IMAGE_WIDTH/2 - 1;
+	gameData.gameBall.x = gameData.gameBar.pos + (IMAGE_WIDTH/2 - IMAGE_HEIGHT/2) - 1;
 
 	while (gameData.isRunning && !termina) {
+
 		WaitForSingleObject(hBallTimer, INFINITE);
 
 		if (gameData.gameBall.isMoving) {
@@ -261,15 +301,15 @@ DWORD WINAPI BallThread(LPVOID lpArg) {
 			gameData.gameBall.y += gameData.gameBall.vspeed;
 
 			//Section for collision detection
-			if (gameData.gameBall.x == gameData.max_x - 8 || gameData.gameBall.x == 0) 
+			if (gameData.gameBall.x == gameData.max_x - IMAGE_HEIGHT || gameData.gameBall.x == 0) 
 				gameData.gameBall.hspeed = gameData.gameBall.hspeed * (-1);
 
 			if (gameData.gameBall.y == 0) 
 				gameData.gameBall.vspeed = gameData.gameBall.vspeed * (-1);
 			
-			if (gameData.gameBall.y >= gameData.max_y - 8) {
-				gameData.gameBall.y = gameData.max_y - 16;
-				gameData.gameBall.x = gameData.gameBar.pos + 12;
+			if (gameData.gameBall.y >= gameData.max_y - IMAGE_HEIGHT) {
+				gameData.gameBall.y = gameData.max_y - (IMAGE_HEIGHT * 2) - 1;
+				gameData.gameBall.x = gameData.gameBar.pos + (IMAGE_WIDTH/2 - IMAGE_HEIGHT/2) - 1;  //->|___________|<-
 
 				gameData.gameBall.hspeed = 1;
 				gameData.gameBall.vspeed = -1;
@@ -277,8 +317,53 @@ DWORD WINAPI BallThread(LPVOID lpArg) {
 				gameData.gameBall.isMoving = 0;
 			}
 			
-			if (gameData.gameBall.y == gameData.max_y - 16 && gameData.gameBar.pos <= gameData.gameBall.x + 8 && gameData.gameBar.pos + 32 >= gameData.gameBall.x) 
+			if (gameData.gameBall.y == gameData.max_y - IMAGE_HEIGHT * 2 && gameData.gameBar.pos <= (gameData.gameBall.x + BALL_WIDTH) && gameData.gameBar.pos + IMAGE_WIDTH >= gameData.gameBall.x) 
 				gameData.gameBall.vspeed = gameData.gameBall.vspeed * (-1);
+
+			for (int i = 0; i < MAX_BRIX_HEIGHT; i++) {
+				for (int j = 0; j < MAX_BRIX_WIDTH; j++) {
+					if (gameData.gameBall.y == gameData.brix[i][j].posy + IMAGE_HEIGHT && gameData.brix[i][j].posx <= (gameData.gameBall.x + BALL_WIDTH) && gameData.brix[i][j].posx + IMAGE_WIDTH >= gameData.gameBall.x && gameData.brix[i][j].health > 0) {
+						gameData.gameBall.vspeed = 1;
+						gameData.brix[i][j].health--;
+						if (gameData.brix[i][j].health == 0) {
+							gameData.brix[i][j].dying = 5;
+							gameData.brix[i][j].health = -1;
+
+							gameData.points += gameData.brix[i][j].points;
+						}
+					}
+					if (gameData.gameBall.y == gameData.brix[i][j].posy - IMAGE_HEIGHT && gameData.brix[i][j].posx <= (gameData.gameBall.x + BALL_WIDTH) && gameData.brix[i][j].posx + IMAGE_WIDTH >= gameData.gameBall.x && gameData.brix[i][j].health > 0) {
+						gameData.gameBall.vspeed = -1;
+						gameData.brix[i][j].health--;
+						if (gameData.brix[i][j].health == 0) {
+							gameData.brix[i][j].dying = 5;
+							gameData.brix[i][j].health = -1;
+						}
+
+						gameData.points += gameData.brix[i][j].points;
+					}
+					if (gameData.gameBall.x == gameData.brix[i][j].posx + IMAGE_WIDTH && gameData.brix[i][j].posy <= (gameData.gameBall.y + BALL_HEIGHT) && gameData.brix[i][j].posy + BALL_HEIGHT >= gameData.gameBall.y && gameData.brix[i][j].health > 0) {
+						gameData.gameBall.hspeed = 1;
+						gameData.brix[i][j].health--;
+						if (gameData.brix[i][j].health == 0) {
+							gameData.brix[i][j].dying = 5;
+							gameData.brix[i][j].health = -1;
+						}
+
+						gameData.points += gameData.brix[i][j].points;
+					}
+					if (gameData.gameBall.x == gameData.brix[i][j].posx - BALL_WIDTH && gameData.brix[i][j].posy <= (gameData.gameBall.y + BALL_HEIGHT) && gameData.brix[i][j].posy + BALL_HEIGHT >= gameData.gameBall.y && gameData.brix[i][j].health > 0) {
+						gameData.gameBall.hspeed = -1;
+						gameData.brix[i][j].health--;
+						if (gameData.brix[i][j].health == 0) {
+							gameData.brix[i][j].dying = 5;
+							gameData.brix[i][j].health = -1;
+						}
+
+						gameData.points += gameData.brix[i][j].points;
+					}
+				}
+			}
 		}
 
 		SetEvent(hGameChangedEvent);

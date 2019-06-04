@@ -82,14 +82,16 @@ DWORD WINAPI ReceiveGame(LPVOID lpParam) {
 
 int maxX = 0, maxY = 0;
 TCHAR frase[200];
-HDC barDC, ballDC, loadingDC, memDC;
+HDC barDC, ballDC, loadingDC, memDC, brickDC;
 HBITMAP hBit;
 HBITMAP hBmpBar;
+HBITMAP hBricks[5];
 HBITMAP hBmpBall;
 HBITMAP hBmpLoading;
 BITMAP bmpBar;
 BITMAP bmpBall;
 BITMAP bmpLoading;
+BITMAP bmpBricks[5];
 
 LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
 	int value;
@@ -113,7 +115,7 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 
 		DeleteObject(hBit);
 
-		hBrush = CreateSolidBrush(RGB(255, 255, 255));
+		hBrush = CreateSolidBrush(RGB(0, 0, 0));
 
 		SelectObject(memDC, hBrush);
 		PatBlt(memDC, 0, 0, maxX, maxY, PATCOPY);
@@ -124,9 +126,20 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 		hBmpBall = (HBITMAP)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_BITMAP_BALL), IMAGE_BITMAP, 0, 0, LR_DEFAULTSIZE);
 		hBmpLoading = (HBITMAP)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_BITMAP_LOADING), IMAGE_BITMAP, 0, 0, LR_DEFAULTSIZE);
 
+		hBricks[GREEN_BRICK] = (HBITMAP)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_BITMAP_GREEN_BRICK), IMAGE_BITMAP, 0, 0, LR_DEFAULTSIZE);
+		hBricks[BLUE_BRICK] = (HBITMAP)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_BITMAP_BLUE_BRICK), IMAGE_BITMAP, 0, 0, LR_DEFAULTSIZE);
+		hBricks[RED_BRICK] = (HBITMAP)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_BITMAP_RED_BRICK), IMAGE_BITMAP, 0, 0, LR_DEFAULTSIZE);
+		hBricks[PINK_BRICK] = (HBITMAP)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_BITMAP_PINK_BRICK), IMAGE_BITMAP, 0, 0, LR_DEFAULTSIZE);
+		hBricks[ORANGE_BRICK] = (HBITMAP)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_BITMAP_ORANGE_BRICK), IMAGE_BITMAP, 0, 0, LR_DEFAULTSIZE);
+
 		GetObject(hBmpBar, sizeof(bmpBar), &bmpBar);
 		GetObject(hBmpBall, sizeof(bmpBall), &bmpBall);
 		GetObject(hBmpLoading, sizeof(bmpLoading), &bmpLoading);
+		GetObject(hBricks[GREEN_BRICK], sizeof(bmpBricks[GREEN_BRICK]), &bmpBricks[GREEN_BRICK]);
+		GetObject(hBricks[BLUE_BRICK], sizeof(bmpBricks[BLUE_BRICK]), &bmpBricks[BLUE_BRICK]);
+		GetObject(hBricks[RED_BRICK], sizeof(bmpBricks[RED_BRICK]), &bmpBricks[RED_BRICK]);
+		GetObject(hBricks[PINK_BRICK], sizeof(bmpBricks[PINK_BRICK]), &bmpBricks[PINK_BRICK]);
+		GetObject(hBricks[ORANGE_BRICK], sizeof(bmpBricks[ORANGE_BRICK]), &bmpBricks[ORANGE_BRICK]);
 		break;
 
 	case WM_PAINT:
@@ -138,12 +151,13 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 			rcBack.right = gameData.max_x;
 			rcBack.bottom = gameData.max_y;
 
-			hBrush = CreateSolidBrush(RGB(120, 120, 120));
+			hBrush = CreateSolidBrush(RGB(255, 255, 255));
 			PatBlt(memDC, 0, 0, maxX, maxY, PATCOPY);
 
 			FillRect(memDC, &rcBack, hBrush);
 
 			if (gameData.isRunning) {
+				brickDC = CreateCompatibleDC(memDC);
 				barDC = CreateCompatibleDC(memDC);
 				ballDC = CreateCompatibleDC(memDC);
 
@@ -152,6 +166,35 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 				BitBlt(memDC, gameData.gameBar.pos, gameData.max_y - 8, bmpBar.bmWidth, bmpBar.bmHeight, barDC, 0, 0, SRCCOPY);
 				BitBlt(memDC, gameData.gameBall.x, gameData.gameBall.y, bmpBall.bmWidth, bmpBall.bmHeight, ballDC, 0, 0, SRCAND);
 
+				for (int i = 0; i < MAX_BRIX_HEIGHT; i++){
+					for (int j = 0; j < MAX_BRIX_WIDTH; j++) {
+						switch (gameData.brix[i][j].health) {
+						case 1:
+							if(gameData.brix[i][j].isSpecial)
+								SelectObject(brickDC, hBricks[ORANGE_BRICK]);
+							else
+								SelectObject(brickDC, hBricks[GREEN_BRICK]);
+								
+							BitBlt(memDC, gameData.brix[i][j].posx, gameData.brix[i][j].posy, bmpBricks[GREEN_BRICK].bmWidth, bmpBricks[GREEN_BRICK].bmHeight, brickDC, 0, 0, SRCAND);
+							break;
+						case 2:
+							SelectObject(brickDC, hBricks[BLUE_BRICK]);
+							BitBlt(memDC, gameData.brix[i][j].posx, gameData.brix[i][j].posy, bmpBricks[BLUE_BRICK].bmWidth, bmpBricks[BLUE_BRICK].bmHeight, brickDC, 0, 0, SRCAND);
+							break;
+						case 3:
+							SelectObject(brickDC, hBricks[RED_BRICK]);
+							BitBlt(memDC, gameData.brix[i][j].posx, gameData.brix[i][j].posy, bmpBricks[RED_BRICK].bmWidth, bmpBricks[RED_BRICK].bmHeight, brickDC, 0, 0, SRCAND);
+							break;
+						case 4:
+							SelectObject(brickDC, hBricks[PINK_BRICK]);
+							BitBlt(memDC, gameData.brix[i][j].posx, gameData.brix[i][j].posy, bmpBricks[PINK_BRICK].bmWidth, bmpBricks[PINK_BRICK].bmHeight, brickDC, 0, 0, SRCAND);
+							break;
+						}
+					}
+
+				}
+
+				DeleteDC(brickDC);
 				DeleteDC(barDC);
 				DeleteDC(ballDC);
 			}

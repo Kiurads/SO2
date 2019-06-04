@@ -4,6 +4,7 @@
 #include <tchar.h>
 #include <fcntl.h>
 #include <io.h>
+#include <time.h>  
 #include "..\Dll\Dll.h"
 
 int setupRegisty();
