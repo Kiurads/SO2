@@ -88,6 +88,11 @@ typedef struct {
 } bar;
 
 typedef struct {
+	int type;
+	int posx, posy;
+} brinde;
+
+typedef struct {
 	int posx, posy;
 	int health;
 	int isSpecial;
