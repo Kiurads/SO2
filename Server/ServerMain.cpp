@@ -7,14 +7,17 @@ HANDLE hBallThread;
 HANDLE hGameThread;
 HANDLE hMessageThread;
 HANDLE hBallTimer;
+HANDLE hBrindeTimer;
+HANDLE hBrindeThread;
 DWORD dwGameThreadId;
 DWORD dwBallThreadId;
 DWORD dwLoginThreadId;
 DWORD dwResult;
 DWORD dwSize;
+DWORD dwBrindeThreadId;
 game gameData;
 
-LARGE_INTEGER li;
+LARGE_INTEGER liBallTimer, liBrindeTimer;
 int termina;
 int nPlayers;
 
@@ -24,6 +27,9 @@ int _tmain(int argc, LPTSTR argv) {
 	_setmode(_fileno(stdout), _O_WTEXT);
 	_setmode(_fileno(stderr), _O_WTEXT);
 #endif
+
+	memset(&hBrindeThread, NULL, sizeof(HANDLE));
+	memset(&hBrindeTimer, NULL, sizeof(HANDLE));
 
 	srand((unsigned)time(NULL));
 
@@ -52,6 +58,7 @@ int _tmain(int argc, LPTSTR argv) {
 				SetEvent(hGameChangedEvent);
 
 				hBallThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)BallThread, NULL, NULL, &dwBallThreadId);
+				hBrindeThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)BrindeThread, NULL, NULL, &dwBrindeThreadId);
 			}
 		}
 
@@ -63,8 +70,13 @@ int _tmain(int argc, LPTSTR argv) {
 		if (_tcscmp(buffer, TEXT("cls")) == 0) system("cls");
 	}
 
+	
+
 	WaitForSingleObject(hBallThread, INFINITE);
 	WaitForSingleObject(hGameThread, INFINITE);
+	
+	WaitForSingleObject(hBrindeThread, INFINITE);
+	
 	UnmapViewOfFile(lpMessageBuffer);
 	UnmapViewOfFile(gMappedGame);
 	CloseHandle(hGameMapFile);
@@ -75,6 +87,9 @@ int _tmain(int argc, LPTSTR argv) {
 	CloseHandle(hReadEvent);
 	CloseHandle(hHasReadEvent);
 	CloseHandle(hBallTimer);
+	
+	CloseHandle(hBrindeThread);
+	
 
 	return 0;
 }
@@ -95,6 +110,8 @@ int setupServer() {
 
 	hBallTimer = CreateWaitableTimer(NULL, TRUE, NULL);
 
+	hBrindeTimer = CreateWaitableTimer(NULL, TRUE, NULL);
+
 	gameData.gameBall.speed = 1;
 	gameData.gameBall.isMoving = 0;
 
@@ -105,18 +122,25 @@ int setupServer() {
 	gameData.max_x = MAX_X;
 	gameData.max_y = MAX_Y;
 
+	for (int i = 0; i < MAX_BRINDES; i++) {
+		gameData.brindes[i].type = -1;
+		gameData.brindes[i].posx = -1;
+		gameData.brindes[i].posy = -1;
+	}
+
 
 	for (int i = 0; i < MAX_BRIX_HEIGHT; i++) {
 		for (int j = 0; j < MAX_BRIX_WIDTH; j++) {
 			int res = rand() % 2;
 			int health = rand() % (4 + 1 - 2) + 2;
+			int typeBrinde;
 
 			gameData.brix[i][j].dying = 0;
 
 			gameData.brix[i][j].posx = j * IMAGE_WIDTH;
 			gameData.brix[i][j].posy = i * IMAGE_HEIGHT;
 			gameData.brix[i][j].health = BRICK_ONE;
-			gameData.brix[i][j].isSpecial = FALSE;
+			gameData.brix[i][j].isSpecial = TRUE;
 			gameData.brix[i][j].points = BRICK_POINTS;
 
 			switch (res) {
@@ -135,8 +159,19 @@ int setupServer() {
 				break;
 			case 1:
 				res = rand() % 10;
-				if(res == 0)
+				if (res == 0) {
 					gameData.brix[i][j].isSpecial = TRUE;
+					typeBrinde = rand() % 3;
+					for (int i = 0; i < MAX_BRINDES; i++) {
+						if (gameData.brindes[i].type == -1) {
+							gameData.brindes[i].type = typeBrinde;
+							gameData.brindes[i].isMoving = 0;
+							gameData.brindes[i].posx = -1;
+							gameData.brindes[i].posy = -1;
+							break;
+						}
+					}
+				}
 				break;
 			}
 		}
@@ -281,12 +316,13 @@ DWORD WINAPI MessageThread(LPVOID lpArg) {
 
 DWORD WINAPI BallThread(LPVOID lpArg) {
 	UNREFERENCED_PARAMETER(lpArg);
+	BOOL hitBrick = FALSE;
 
-	li.QuadPart = -400000LL;
+	liBallTimer.QuadPart = -500000LL;
 
-	SetWaitableTimer(hBallTimer, &li, 0, NULL, NULL, 0);
+	SetWaitableTimer(hBallTimer, &liBallTimer, 0, NULL, NULL, 0);
 
-	gameData.gameBall.hspeed = 1;
+	gameData.gameBall.hspeed = 0;
 	gameData.gameBall.vspeed = -1;
 
 	gameData.gameBall.y = gameData.max_y - IMAGE_WIDTH/2 - 1;
@@ -311,8 +347,8 @@ DWORD WINAPI BallThread(LPVOID lpArg) {
 				gameData.gameBall.y = gameData.max_y - (IMAGE_HEIGHT * 2) - 1;
 				gameData.gameBall.x = gameData.gameBar.pos + (IMAGE_WIDTH/2 - IMAGE_HEIGHT/2) - 1;  //->|___________|<-
 
-				gameData.gameBall.hspeed = 1;
-				gameData.gameBall.vspeed = -1;
+				gameData.gameBall.hspeed = RGHT;
+				gameData.gameBall.vspeed = UP;
 
 				gameData.gameBall.isMoving = 0;
 			}
@@ -322,45 +358,62 @@ DWORD WINAPI BallThread(LPVOID lpArg) {
 
 			for (int i = 0; i < MAX_BRIX_HEIGHT; i++) {
 				for (int j = 0; j < MAX_BRIX_WIDTH; j++) {
+					hitBrick = false;
 					if (gameData.gameBall.y == gameData.brix[i][j].posy + IMAGE_HEIGHT && gameData.brix[i][j].posx <= (gameData.gameBall.x + BALL_WIDTH) && gameData.brix[i][j].posx + IMAGE_WIDTH >= gameData.gameBall.x && gameData.brix[i][j].health > 0) {
-						gameData.gameBall.vspeed = 1;
+						gameData.gameBall.vspeed = DWN;
 						gameData.brix[i][j].health--;
 						if (gameData.brix[i][j].health == 0) {
 							gameData.brix[i][j].dying = 5;
-							gameData.brix[i][j].health = -1;
+							gameData.brix[i][j].health = DEAD;
 
 							gameData.points += gameData.brix[i][j].points;
+
+							hitBrick = true;
 						}
 					}
 					if (gameData.gameBall.y == gameData.brix[i][j].posy - IMAGE_HEIGHT && gameData.brix[i][j].posx <= (gameData.gameBall.x + BALL_WIDTH) && gameData.brix[i][j].posx + IMAGE_WIDTH >= gameData.gameBall.x && gameData.brix[i][j].health > 0) {
-						gameData.gameBall.vspeed = -1;
+						gameData.gameBall.vspeed = UP;
 						gameData.brix[i][j].health--;
 						if (gameData.brix[i][j].health == 0) {
 							gameData.brix[i][j].dying = 5;
-							gameData.brix[i][j].health = -1;
+							gameData.brix[i][j].health = DEAD;
 						}
+						hitBrick = true;
 
 						gameData.points += gameData.brix[i][j].points;
 					}
 					if (gameData.gameBall.x == gameData.brix[i][j].posx + IMAGE_WIDTH && gameData.brix[i][j].posy <= (gameData.gameBall.y + BALL_HEIGHT) && gameData.brix[i][j].posy + BALL_HEIGHT >= gameData.gameBall.y && gameData.brix[i][j].health > 0) {
-						gameData.gameBall.hspeed = 1;
+						gameData.gameBall.hspeed = RGHT;
 						gameData.brix[i][j].health--;
 						if (gameData.brix[i][j].health == 0) {
 							gameData.brix[i][j].dying = 5;
-							gameData.brix[i][j].health = -1;
+							gameData.brix[i][j].health = DEAD;
 						}
+						hitBrick = true;
 
 						gameData.points += gameData.brix[i][j].points;
 					}
 					if (gameData.gameBall.x == gameData.brix[i][j].posx - BALL_WIDTH && gameData.brix[i][j].posy <= (gameData.gameBall.y + BALL_HEIGHT) && gameData.brix[i][j].posy + BALL_HEIGHT >= gameData.gameBall.y && gameData.brix[i][j].health > 0) {
-						gameData.gameBall.hspeed = -1;
+						gameData.gameBall.hspeed = LFT;
 						gameData.brix[i][j].health--;
 						if (gameData.brix[i][j].health == 0) {
 							gameData.brix[i][j].dying = 5;
-							gameData.brix[i][j].health = -1;
+							gameData.brix[i][j].health = DEAD;
 						}
+						hitBrick = true;
 
 						gameData.points += gameData.brix[i][j].points;
+					}
+
+					if (hitBrick && gameData.brix[i][j].isSpecial) {
+						for (int k = 0; k < MAX_BRINDES; k++) {
+							if (gameData.brindes[k].posx == -1 && gameData.brindes[k].posy == -1) {
+								gameData.brindes[k].posx = gameData.brix[i][j].posx + BALL_WIDTH * 2;
+								gameData.brindes[k].posy = gameData.brix[i][j].posy;
+								gameData.brindes[k].isMoving = 1;
+								break;
+							}
+						}
 					}
 				}
 			}
@@ -368,7 +421,49 @@ DWORD WINAPI BallThread(LPVOID lpArg) {
 
 		SetEvent(hGameChangedEvent);
 
-		SetWaitableTimer(hBallTimer, &li, 0, NULL, NULL, 0);
+		SetWaitableTimer(hBallTimer, &liBallTimer, 0, NULL, NULL, 0);
+	}
+
+	return 0;
+}
+
+DWORD WINAPI BrindeThread(LPVOID lpParam) {
+	UNREFERENCED_PARAMETER(lpParam);
+	liBrindeTimer.QuadPart = -500000LL;
+
+	SetWaitableTimer(hBrindeTimer, &liBrindeTimer, 0, NULL, NULL, 0);
+
+	while (gameData.isRunning) {
+		WaitForSingleObject(hBrindeTimer, INFINITE);
+		
+		for (int index = 0; index < MAX_BRINDES; index++) {
+
+			if (gameData.brindes[index].posy != -1) {
+				gameData.brindes[index].posy += 1;
+
+				if (gameData.brindes[index].posy == gameData.max_y - BALL_HEIGHT * 2 && gameData.gameBar.pos <= (gameData.brindes[index].posx + BALL_WIDTH) &&
+					gameData.gameBar.pos + IMAGE_WIDTH >= gameData.brindes[index].posx) {
+					gameData.brindes[index].posy = -1;
+					gameData.brindes[index].posx = -1;
+					gameData.brindes[index].isMoving = 0;
+
+					switch (gameData.brindes[index].type) {
+					case SPEED_UP:
+						break;
+					case SPEED_DOWN:
+						break;
+					case VIDA_EXTRA:
+						break;
+					case TRIPLE:
+						break;
+					}
+				}
+			}
+			//else
+				//break;
+		}
+		SetEvent(hGameChangedEvent);
+		SetWaitableTimer(hBrindeTimer, &liBrindeTimer, 0, NULL, NULL, 0);
 	}
 
 	return 0;

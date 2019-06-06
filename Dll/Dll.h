@@ -18,11 +18,23 @@
 #define TAM 50
 #define TTAM 100
 #define BUFFER_MAX_SIZE 4096
+#define MAX_BRINDES 10
 
 #define IMAGE_WIDTH 32
 #define IMAGE_HEIGHT 8
 #define BALL_WIDTH 8
 #define BALL_HEIGHT 8
+
+#define DEAD -1
+#define LFT -1
+#define RGHT 1
+#define DWN 1
+#define UP -1
+
+#define SPEED_UP 0
+#define SPEED_DOWN 1
+#define VIDA_EXTRA 2
+#define TRIPLE 3
 
 #define BRICK_ONE 1
 #define BRICK_POINTS 10
@@ -90,6 +102,7 @@ typedef struct {
 typedef struct {
 	int type;
 	int posx, posy;
+	int isMoving;
 } brinde;
 
 typedef struct {
@@ -104,6 +117,7 @@ typedef struct {
 	ball gameBall;
 	bar gameBar;
 	brick brix[MAX_BRIX_HEIGHT][MAX_BRIX_WIDTH];
+	brinde brindes[MAX_BRINDES];
 	int points;
 	int isRunning;
 	int	max_x;

@@ -82,16 +82,18 @@ DWORD WINAPI ReceiveGame(LPVOID lpParam) {
 
 int maxX = 0, maxY = 0;
 TCHAR frase[200];
-HDC barDC, ballDC, loadingDC, memDC, brickDC;
+HDC barDC, ballDC, loadingDC, memDC, brickDC, brindeDC;
 HBITMAP hBit;
 HBITMAP hBmpBar;
 HBITMAP hBricks[5];
 HBITMAP hBmpBall;
 HBITMAP hBmpLoading;
+HBITMAP hBmpBrinde;
 BITMAP bmpBar;
 BITMAP bmpBall;
 BITMAP bmpLoading;
 BITMAP bmpBricks[5];
+BITMAP bmpBrinde;
 
 LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
 	int value;
@@ -99,6 +101,7 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 	HDC hdc;
 	PAINTSTRUCT ps;
 	HBRUSH hBrush;
+	TCHAR positions[50];
 
 	switch (message) {
 	case WM_CREATE:
@@ -132,14 +135,19 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 		hBricks[PINK_BRICK] = (HBITMAP)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_BITMAP_PINK_BRICK), IMAGE_BITMAP, 0, 0, LR_DEFAULTSIZE);
 		hBricks[ORANGE_BRICK] = (HBITMAP)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_BITMAP_ORANGE_BRICK), IMAGE_BITMAP, 0, 0, LR_DEFAULTSIZE);
 
+		hBmpBrinde = (HBITMAP)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_BITMAP_BALL), IMAGE_BITMAP, 0, 0, LR_DEFAULTSIZE);
+
 		GetObject(hBmpBar, sizeof(bmpBar), &bmpBar);
 		GetObject(hBmpBall, sizeof(bmpBall), &bmpBall);
 		GetObject(hBmpLoading, sizeof(bmpLoading), &bmpLoading);
+
 		GetObject(hBricks[GREEN_BRICK], sizeof(bmpBricks[GREEN_BRICK]), &bmpBricks[GREEN_BRICK]);
 		GetObject(hBricks[BLUE_BRICK], sizeof(bmpBricks[BLUE_BRICK]), &bmpBricks[BLUE_BRICK]);
 		GetObject(hBricks[RED_BRICK], sizeof(bmpBricks[RED_BRICK]), &bmpBricks[RED_BRICK]);
 		GetObject(hBricks[PINK_BRICK], sizeof(bmpBricks[PINK_BRICK]), &bmpBricks[PINK_BRICK]);
 		GetObject(hBricks[ORANGE_BRICK], sizeof(bmpBricks[ORANGE_BRICK]), &bmpBricks[ORANGE_BRICK]);
+		
+		GetObject(hBmpBrinde, sizeof(bmpBrinde), &bmpBrinde);
 		break;
 
 	case WM_PAINT:
@@ -160,6 +168,7 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 				brickDC = CreateCompatibleDC(memDC);
 				barDC = CreateCompatibleDC(memDC);
 				ballDC = CreateCompatibleDC(memDC);
+				brindeDC = CreateCompatibleDC(memDC);
 
 				SelectObject(barDC, hBmpBar);  // colocar bitmap no DC
 				SelectObject(ballDC, hBmpBall);  // colocar bitmap no DC
@@ -194,6 +203,21 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 
 				}
 
+				for (int i = 0; i < MAX_BRINDES; i++) {
+					if (gameData.brindes[i].isMoving == 1) {
+						SelectObject(brindeDC, hBmpBrinde);
+						BitBlt(memDC, gameData.brindes[i].posx, gameData.brindes[i].posy, bmpBrinde.bmWidth, bmpBrinde.bmHeight, brindeDC, 0, 0, SRCAND);
+
+						_stprintf_s(positions, 50, TEXT("~x: %d y: %d"), gameData.brindes[i].posx, gameData.brindes[i].posy);
+
+						rcBack.left = 250;
+						rcBack.top = 10;
+					}
+				}
+
+				
+
+				DeleteDC(brindeDC);
 				DeleteDC(brickDC);
 				DeleteDC(barDC);
 				DeleteDC(ballDC);
