@@ -452,7 +452,7 @@ DWORD WINAPI BrindeThread(LPVOID lpParam) {
 						break;
 					case SPEED_DOWN:
 						break;
-					case VIDA_EXTRA:
+					case EXTRA_LIFE:
 						break;
 					case TRIPLE:
 						break;

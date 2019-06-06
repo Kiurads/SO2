@@ -88,12 +88,18 @@ HBITMAP hBmpBar;
 HBITMAP hBricks[5];
 HBITMAP hBmpBall;
 HBITMAP hBmpLoading;
-HBITMAP hBmpBrinde;
+HBITMAP hBmpLife;
+HBITMAP hBmpSpeedUp;
+HBITMAP hBmpSpeedDown;
+HBITMAP hBmpTriple;
 BITMAP bmpBar;
 BITMAP bmpBall;
 BITMAP bmpLoading;
 BITMAP bmpBricks[5];
-BITMAP bmpBrinde;
+BITMAP bmpLife;
+BITMAP bmpSpeedUp;
+BITMAP bmpSpeedDown;
+BITMAP bmpTriple;
 
 LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
 	int value;
@@ -135,7 +141,10 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 		hBricks[PINK_BRICK] = (HBITMAP)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_BITMAP_PINK_BRICK), IMAGE_BITMAP, 0, 0, LR_DEFAULTSIZE);
 		hBricks[ORANGE_BRICK] = (HBITMAP)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_BITMAP_ORANGE_BRICK), IMAGE_BITMAP, 0, 0, LR_DEFAULTSIZE);
 
-		hBmpBrinde = (HBITMAP)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_BITMAP_BALL), IMAGE_BITMAP, 0, 0, LR_DEFAULTSIZE);
+		hBmpLife = (HBITMAP)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_BITMAP_LIFE), IMAGE_BITMAP, 0, 0, LR_DEFAULTSIZE);
+		hBmpSpeedUp = (HBITMAP)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_BITMAP_SPEED_UP), IMAGE_BITMAP, 0, 0, LR_DEFAULTSIZE);
+		hBmpSpeedDown = (HBITMAP)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_BITMAP_SPEED_DOWN), IMAGE_BITMAP, 0, 0, LR_DEFAULTSIZE);
+		hBmpTriple = (HBITMAP)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_BITMAP_TRIPLE), IMAGE_BITMAP, 0, 0, LR_DEFAULTSIZE);
 
 		GetObject(hBmpBar, sizeof(bmpBar), &bmpBar);
 		GetObject(hBmpBall, sizeof(bmpBall), &bmpBall);
@@ -147,7 +156,10 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 		GetObject(hBricks[PINK_BRICK], sizeof(bmpBricks[PINK_BRICK]), &bmpBricks[PINK_BRICK]);
 		GetObject(hBricks[ORANGE_BRICK], sizeof(bmpBricks[ORANGE_BRICK]), &bmpBricks[ORANGE_BRICK]);
 		
-		GetObject(hBmpBrinde, sizeof(bmpBrinde), &bmpBrinde);
+		GetObject(hBmpLife, sizeof(bmpLife), &bmpLife);
+		GetObject(hBmpSpeedUp, sizeof(bmpSpeedUp), &bmpSpeedUp);
+		GetObject(hBmpSpeedDown, sizeof(bmpSpeedDown), &bmpSpeedDown);
+		GetObject(hBmpTriple, sizeof(bmpTriple), &bmpTriple);
 		break;
 
 	case WM_PAINT:
@@ -205,8 +217,24 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 
 				for (int i = 0; i < MAX_BRINDES; i++) {
 					if (gameData.brindes[i].isMoving == 1) {
-						SelectObject(brindeDC, hBmpBrinde);
-						BitBlt(memDC, gameData.brindes[i].posx, gameData.brindes[i].posy, bmpBrinde.bmWidth, bmpBrinde.bmHeight, brindeDC, 0, 0, SRCAND);
+						switch (gameData.brindes[i].type) {
+						case SPEED_DOWN:
+							SelectObject(brindeDC, hBmpSpeedDown);
+							BitBlt(memDC, gameData.brindes[i].posx, gameData.brindes[i].posy, bmpSpeedDown.bmWidth, bmpSpeedDown.bmHeight, brindeDC, 0, 0, SRCAND);
+							break;
+						case SPEED_UP:
+							SelectObject(brindeDC, hBmpSpeedUp);
+							BitBlt(memDC, gameData.brindes[i].posx, gameData.brindes[i].posy, bmpSpeedUp.bmWidth, bmpSpeedUp.bmHeight, brindeDC, 0, 0, SRCAND);
+							break;
+						case TRIPLE:
+							SelectObject(brindeDC, hBmpTriple);
+							BitBlt(memDC, gameData.brindes[i].posx, gameData.brindes[i].posy, bmpTriple.bmWidth, bmpTriple.bmHeight, brindeDC, 0, 0, SRCAND);
+							break;
+						case EXTRA_LIFE:
+							SelectObject(brindeDC, hBmpLife);
+							BitBlt(memDC, gameData.brindes[i].posx, gameData.brindes[i].posy, bmpLife.bmWidth, bmpLife.bmHeight, brindeDC, 0, 0, SRCAND);
+							break;
+						}
 
 						_stprintf_s(positions, 50, TEXT("~x: %d y: %d"), gameData.brindes[i].posx, gameData.brindes[i].posy);
 

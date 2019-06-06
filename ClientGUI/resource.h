@@ -18,8 +18,12 @@
 #define IDB_BITMAP_BLUE_BRICK           118
 #define IDB_BITMAP1                     119
 #define IDB_BITMAP_PINK_BRICK           119
-#define IDB_BITMAP2                     120
 #define IDB_BITMAP_LOADING              121
+#define IDB_BITMAP_LIFE                 124
+#define IDB_BITMAP_SPEED_UP             125
+#define IDB_BITMAP_SPEED_DOWN           126
+#define IDB_BITMAP2                     127
+#define IDB_BITMAP_TRIPLE               127
 #define IDC_EDIT1                       1001
 #define IDC_USERNAME                    1001
 #define ID_LOGIN                        40001
@@ -31,7 +35,7 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        122
+#define _APS_NEXT_RESOURCE_VALUE        128
 #define _APS_NEXT_COMMAND_VALUE         40005
 #define _APS_NEXT_CONTROL_VALUE         1002
 #define _APS_NEXT_SYMED_VALUE           101

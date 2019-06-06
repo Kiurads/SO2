@@ -33,7 +33,7 @@
 
 #define SPEED_UP 0
 #define SPEED_DOWN 1
-#define VIDA_EXTRA 2
+#define EXTRA_LIFE 2
 #define TRIPLE 3
 
 #define BRICK_ONE 1

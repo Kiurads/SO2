@@ -60,5 +60,17 @@
     <Image Include="Breakout_loading.bmp">
       <Filter>Resource Files</Filter>
     </Image>
+    <Image Include="Breakout_life.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="Breakout_speed_up.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="Breakout_speed_down.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="Breakout_triple.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>
