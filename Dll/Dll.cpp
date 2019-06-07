@@ -91,9 +91,18 @@ void SetupClient(pPlayer data, pGame gameData) {
 	hGameMapFile = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, GAME_FILE_NAME);
 	gMappedGame = (game(*))MapViewOfFile(hGameMapFile, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(game));
 
-	gameData->gameBall.x = 0;
-	gameData->gameBall.y = 0;
-	gameData->gameBall.speed = 1;
+	for (int i = 0; i < TRIPLE; i++) {
+		if (i == 0) {
+			gameData->gameBall[i].x = 0;
+			gameData->gameBall[i].y = 0;
+			gameData->gameBall[i].speed = 1;
+		}
+		else {
+			gameData->gameBall[i].x = -1;
+			gameData->gameBall[i].y = -1;
+			gameData->gameBall[i].speed = -1;
+		}
+	}
 
 	gameData->gameBar.pos = MAX_X / 2;
 
@@ -103,6 +112,7 @@ void SetupClient(pPlayer data, pGame gameData) {
 	gameData->max_y = MAX_Y;
 
 	memset(data->tUsername, '\0', sizeof(TCHAR) * TAM);
+	data->nLives = INITIAL_LIVES;
 }
 
 void CloseClient() {

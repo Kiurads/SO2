@@ -13,15 +13,21 @@
 #define MAX_Y 200
 #define MAX_BRIX_WIDTH 10
 #define MAX_BRIX_HEIGHT 10
+#define MAX_SPEED -250000LL
+#define MIN_SPEED -800000LL
+#define INITIAL_LIVES 3
+#define MAIN_BALL 0
 
 //Zona de tamanhos para buffers
 #define TAM 50
 #define TTAM 100
 #define BUFFER_MAX_SIZE 4096
-#define MAX_BRINDES 10
+#define MAX_BRINDES 100
 
 #define IMAGE_WIDTH 32
+#define IMAGE_WIDTH_OFFSET 2
 #define IMAGE_HEIGHT 8
+#define IMAGE_HEIGHT_OFFSET 2
 #define BALL_WIDTH 8
 #define BALL_HEIGHT 8
 
@@ -78,6 +84,7 @@ typedef struct {
 	HANDLE hHasReadEvent;
 	TCHAR tReadEventName[TTAM];
 	TCHAR tHasReadEventName[TTAM];
+	int nLives;
 } player, *pPlayer;
 
 typedef struct {
@@ -114,7 +121,7 @@ typedef struct {
 } brick;
 
 typedef struct {
-	ball gameBall;
+	ball gameBall[TRIPLE];
 	bar gameBar;
 	brick brix[MAX_BRIX_HEIGHT][MAX_BRIX_WIDTH];
 	brinde brindes[MAX_BRINDES];

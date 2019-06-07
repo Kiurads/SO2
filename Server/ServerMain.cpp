@@ -17,6 +17,9 @@ DWORD dwSize;
 DWORD dwBrindeThreadId;
 game gameData;
 
+BOOL firstBallPlaced = FALSE;
+BOOL tripleActive = FALSE;
+
 LARGE_INTEGER liBallTimer, liBrindeTimer;
 int termina;
 int nPlayers;
@@ -112,8 +115,23 @@ int setupServer() {
 
 	hBrindeTimer = CreateWaitableTimer(NULL, TRUE, NULL);
 
-	gameData.gameBall.speed = 1;
-	gameData.gameBall.isMoving = 0;
+	for (int i = 0; i < TRIPLE; i++) {
+		
+		gameData.gameBall[i].y = -1;
+		gameData.gameBall[i].x = -1;
+	
+		gameData.gameBall[i].speed = 1;
+		gameData.gameBall[i].isMoving = 0;
+
+		if (i == MAIN_BALL) {
+			gameData.gameBall[i].y = -1;
+			gameData.gameBall[i].x = -1;
+		}
+		else {
+			gameData.gameBall[i].y = -1000;
+			gameData.gameBall[i].x = -1000;
+		}
+	}
 
 	gameData.gameBar.pos = MAX_X / 2;
 
@@ -140,7 +158,7 @@ int setupServer() {
 			gameData.brix[i][j].posx = j * IMAGE_WIDTH;
 			gameData.brix[i][j].posy = i * IMAGE_HEIGHT;
 			gameData.brix[i][j].health = BRICK_ONE;
-			gameData.brix[i][j].isSpecial = TRUE;
+			gameData.brix[i][j].isSpecial = FALSE;
 			gameData.brix[i][j].points = BRICK_POINTS;
 
 			switch (res) {
@@ -279,36 +297,42 @@ DWORD WINAPI MessageThread(LPVOID lpArg) {
 				}
 			}
 		}
+		//for (int i = 0; i < TRIPLE; i++) {
+			if (_tcscmp((*lpMessageBuffer)[0], LEFT) == 0) {
+				if (gameData.gameBar.pos > 0) {
+					gameData.gameBar.pos--;
 
-		if (_tcscmp((*lpMessageBuffer)[0], LEFT) == 0) {
-			if (gameData.gameBar.pos > 0) {
-				gameData.gameBar.pos--;
+					for (int i = 0; i < TRIPLE; i++) {
+						if (!gameData.gameBall[i].isMoving)
+							gameData.gameBall[i].x--;
+					}
 
-				if (!gameData.gameBall.isMoving) 
-					gameData.gameBall.x--;
+					SetEvent(hGameChangedEvent);
+				}
+			}
 
+			if (_tcscmp((*lpMessageBuffer)[0], RIGHT) == 0) {
+				if (gameData.gameBar.pos + IMAGE_WIDTH < MAX_X) {
+					gameData.gameBar.pos++;
+
+					for (int i = 0; i < TRIPLE; i++) {
+						if (!gameData.gameBall[i].isMoving)
+							gameData.gameBall[i].x++;
+					}
+					SetEvent(hGameChangedEvent);
+				}
+			}
+
+			if (_tcscmp((*lpMessageBuffer)[0], SPACE) == 0) {
+
+				for (int i = 0; i < TRIPLE; i++) {
+					if (!gameData.gameBall[i].isMoving)
+						gameData.gameBall[i].isMoving = 1;
+				}
+				
 				SetEvent(hGameChangedEvent);
 			}
-		}
-
-		if (_tcscmp((*lpMessageBuffer)[0], RIGHT) == 0) {
-			if (gameData.gameBar.pos + IMAGE_WIDTH < MAX_X) {
-				gameData.gameBar.pos++;
-
-				if (!gameData.gameBall.isMoving)
-					gameData.gameBall.x++;
-
-				SetEvent(hGameChangedEvent);
-			}
-		}
-
-		if (_tcscmp((*lpMessageBuffer)[0], SPACE) == 0) {
-			if (!gameData.gameBall.isMoving) {
-				gameData.gameBall.isMoving = 1;
-
-				SetEvent(hGameChangedEvent);
-			}
-		}
+		//}
 	}
 
 	return 0;
@@ -317,108 +341,173 @@ DWORD WINAPI MessageThread(LPVOID lpArg) {
 DWORD WINAPI BallThread(LPVOID lpArg) {
 	UNREFERENCED_PARAMETER(lpArg);
 	BOOL hitBrick = FALSE;
+	int count = 0;
 
 	liBallTimer.QuadPart = -500000LL;
 
 	SetWaitableTimer(hBallTimer, &liBallTimer, 0, NULL, NULL, 0);
 
-	gameData.gameBall.hspeed = 0;
-	gameData.gameBall.vspeed = -1;
-
-	gameData.gameBall.y = gameData.max_y - IMAGE_WIDTH/2 - 1;
-	gameData.gameBall.x = gameData.gameBar.pos + (IMAGE_WIDTH/2 - IMAGE_HEIGHT/2) - 1;
-
 	while (gameData.isRunning && !termina) {
+		for (int i = 0; i < TRIPLE; i++) {
+			if (i == MAIN_BALL && !gameData.gameBall[MAIN_BALL].isMoving && !firstBallPlaced) {
+				gameData.gameBall[i].hspeed = 1;
+				gameData.gameBall[i].vspeed = -1;
 
-		WaitForSingleObject(hBallTimer, INFINITE);
+				gameData.gameBall[i].y = gameData.max_y - IMAGE_WIDTH / 2 - 1;
+				gameData.gameBall[i].x = gameData.gameBar.pos +(IMAGE_WIDTH / 2 - IMAGE_HEIGHT / 2) - 1;
 
-		if (gameData.gameBall.isMoving) {
-			gameData.gameBall.x += gameData.gameBall.hspeed;
-			gameData.gameBall.y += gameData.gameBall.vspeed;
-
-			//Section for collision detection
-			if (gameData.gameBall.x == gameData.max_x - IMAGE_HEIGHT || gameData.gameBall.x == 0) 
-				gameData.gameBall.hspeed = gameData.gameBall.hspeed * (-1);
-
-			if (gameData.gameBall.y == 0) 
-				gameData.gameBall.vspeed = gameData.gameBall.vspeed * (-1);
-			
-			if (gameData.gameBall.y >= gameData.max_y - IMAGE_HEIGHT) {
-				gameData.gameBall.y = gameData.max_y - (IMAGE_HEIGHT * 2) - 1;
-				gameData.gameBall.x = gameData.gameBar.pos + (IMAGE_WIDTH/2 - IMAGE_HEIGHT/2) - 1;  //->|___________|<-
-
-				gameData.gameBall.hspeed = RGHT;
-				gameData.gameBall.vspeed = UP;
-
-				gameData.gameBall.isMoving = 0;
+				firstBallPlaced = TRUE;
 			}
-			
-			if (gameData.gameBall.y == gameData.max_y - IMAGE_HEIGHT * 2 && gameData.gameBar.pos <= (gameData.gameBall.x + BALL_WIDTH) && gameData.gameBar.pos + IMAGE_WIDTH >= gameData.gameBall.x) 
-				gameData.gameBall.vspeed = gameData.gameBall.vspeed * (-1);
+			else if(tripleActive){
+				switch (rand() % 2) {
+				case 0:
+					gameData.gameBall[i].hspeed = -1;
+					break;
+				case 1:
+					gameData.gameBall[i].hspeed = 1;
+					break;
+				}
+				gameData.gameBall[i].vspeed = -1;
 
-			for (int i = 0; i < MAX_BRIX_HEIGHT; i++) {
-				for (int j = 0; j < MAX_BRIX_WIDTH; j++) {
-					hitBrick = false;
-					if (gameData.gameBall.y == gameData.brix[i][j].posy + IMAGE_HEIGHT && gameData.brix[i][j].posx <= (gameData.gameBall.x + BALL_WIDTH) && gameData.brix[i][j].posx + IMAGE_WIDTH >= gameData.gameBall.x && gameData.brix[i][j].health > 0) {
-						gameData.gameBall.vspeed = DWN;
-						gameData.brix[i][j].health--;
-						if (gameData.brix[i][j].health == 0) {
-							gameData.brix[i][j].dying = 5;
-							gameData.brix[i][j].health = DEAD;
+				gameData.gameBall[i].y = gameData.max_y - IMAGE_WIDTH / 2 - 1;
+				gameData.gameBall[i].x = rand() % MAX_X - BALL_WIDTH;
+				gameData.gameBall[i].isMoving = 1;
 
-							gameData.points += gameData.brix[i][j].points;
+				count++;
 
+				if(count >= 2)
+					tripleActive = FALSE;
+
+			}
+
+			WaitForSingleObject(hBallTimer, INFINITE);
+
+			if (gameData.gameBall[i].isMoving) {
+				gameData.gameBall[i].x += gameData.gameBall[i].hspeed;
+				gameData.gameBall[i].y += gameData.gameBall[i].vspeed;
+
+				//Section for collision detection
+				if (gameData.gameBall[i].x == gameData.max_x - IMAGE_HEIGHT || gameData.gameBall[i].x == 0)
+					gameData.gameBall[i].hspeed = gameData.gameBall[i].hspeed * (-1);
+
+				if (gameData.gameBall[i].y == 0)
+					gameData.gameBall[i].vspeed = gameData.gameBall[i].vspeed * (-1);
+
+				if (gameData.gameBall[i].y >= gameData.max_y - IMAGE_HEIGHT) {
+					liBallTimer.QuadPart = -500000LL;
+					players->nLives--;
+
+					/*if (i == MAIN_BALL && players->nLives <= 0)//update scoreboard
+						break;*/
+					
+					if (i == MAIN_BALL) {
+						gameData.gameBall[i].y = gameData.max_y - (IMAGE_HEIGHT * 2) - 1;
+						gameData.gameBall[i].x = gameData.gameBar.pos + (IMAGE_WIDTH / 2 - IMAGE_HEIGHT / 2) - 1;  //->|___________|<-
+
+						gameData.gameBall[i].hspeed = RGHT;
+						gameData.gameBall[i].vspeed = UP;
+
+						gameData.gameBall[i].isMoving = 0;
+
+						tripleActive = FALSE;
+					}
+					else {
+						gameData.gameBall[i].y = -1000;
+						gameData.gameBall[i].x = -1000;  //->|___________|<-
+
+						gameData.gameBall[i].hspeed = 0;
+						gameData.gameBall[i].vspeed = 0;
+
+						gameData.gameBall[i].isMoving = 0;
+					}
+				}
+
+				if (gameData.gameBall[i].y == gameData.max_y - IMAGE_HEIGHT * 2 && gameData.gameBar.pos <= (gameData.gameBall[i].x + BALL_WIDTH) && gameData.gameBar.pos + IMAGE_WIDTH >= gameData.gameBall[i].x)
+					gameData.gameBall[i].vspeed = gameData.gameBall[i].vspeed * (-1);
+
+				for (int j = 0; j < MAX_BRIX_HEIGHT; j++) {
+					for (int k = 0; k < MAX_BRIX_WIDTH; k++) {
+						hitBrick = false;
+						if (gameData.gameBall[i].y == gameData.brix[j][k].posy + IMAGE_HEIGHT && gameData.brix[j][k].posx <= (gameData.gameBall[i].x + BALL_WIDTH) && gameData.brix[j][k].posx + IMAGE_WIDTH >= gameData.gameBall[i].x && gameData.brix[j][k].health > 0) {
+							gameData.gameBall[i].vspeed = DWN;
+							gameData.brix[j][k].health--;
+							if (gameData.brix[j][k].health == 0) {
+								gameData.brix[j][k].dying = 5;
+								gameData.brix[j][k].health = DEAD;
+
+								hitBrick = true;
+
+								gameData.points += gameData.brix[j][k].points;
+								players->hiScore = gameData.points;
+							}
+						}
+						if (gameData.gameBall[i].y == gameData.brix[j][k].posy - IMAGE_HEIGHT && gameData.brix[j][k].posx <= (gameData.gameBall[i].x + BALL_WIDTH) && gameData.brix[j][k].posx + IMAGE_WIDTH >= gameData.gameBall[i].x && gameData.brix[j][k].health > 0) {
+							gameData.gameBall[i].vspeed = UP;
+							gameData.brix[j][k].health--;
+							if (gameData.brix[j][k].health == 0) {
+								gameData.brix[j][k].dying = 5;
+								gameData.brix[j][k].health = DEAD;
+							}
 							hitBrick = true;
-						}
-					}
-					if (gameData.gameBall.y == gameData.brix[i][j].posy - IMAGE_HEIGHT && gameData.brix[i][j].posx <= (gameData.gameBall.x + BALL_WIDTH) && gameData.brix[i][j].posx + IMAGE_WIDTH >= gameData.gameBall.x && gameData.brix[i][j].health > 0) {
-						gameData.gameBall.vspeed = UP;
-						gameData.brix[i][j].health--;
-						if (gameData.brix[i][j].health == 0) {
-							gameData.brix[i][j].dying = 5;
-							gameData.brix[i][j].health = DEAD;
-						}
-						hitBrick = true;
 
-						gameData.points += gameData.brix[i][j].points;
-					}
-					if (gameData.gameBall.x == gameData.brix[i][j].posx + IMAGE_WIDTH && gameData.brix[i][j].posy <= (gameData.gameBall.y + BALL_HEIGHT) && gameData.brix[i][j].posy + BALL_HEIGHT >= gameData.gameBall.y && gameData.brix[i][j].health > 0) {
-						gameData.gameBall.hspeed = RGHT;
-						gameData.brix[i][j].health--;
-						if (gameData.brix[i][j].health == 0) {
-							gameData.brix[i][j].dying = 5;
-							gameData.brix[i][j].health = DEAD;
+							gameData.points += gameData.brix[j][k].points;
+							players->hiScore = gameData.points;
 						}
-						hitBrick = true;
+						if (gameData.gameBall[i].x == gameData.brix[j][k].posx + IMAGE_WIDTH && gameData.brix[j][k].posy <= (gameData.gameBall[i].y + BALL_HEIGHT) && gameData.brix[j][k].posy + BALL_HEIGHT >= gameData.gameBall[i].y && gameData.brix[j][k].health > 0) {
+							gameData.gameBall[i].hspeed = RGHT;
+							gameData.brix[j][k].health--;
+							if (gameData.brix[j][k].health == 0) {
+								gameData.brix[j][k].dying = 5;
+								gameData.brix[j][k].health = DEAD;
+							}
+							hitBrick = true;
 
-						gameData.points += gameData.brix[i][j].points;
-					}
-					if (gameData.gameBall.x == gameData.brix[i][j].posx - BALL_WIDTH && gameData.brix[i][j].posy <= (gameData.gameBall.y + BALL_HEIGHT) && gameData.brix[i][j].posy + BALL_HEIGHT >= gameData.gameBall.y && gameData.brix[i][j].health > 0) {
-						gameData.gameBall.hspeed = LFT;
-						gameData.brix[i][j].health--;
-						if (gameData.brix[i][j].health == 0) {
-							gameData.brix[i][j].dying = 5;
-							gameData.brix[i][j].health = DEAD;
+							gameData.points += gameData.brix[j][k].points;
+							players->hiScore = gameData.points;
 						}
-						hitBrick = true;
+						if (gameData.gameBall[i].x == gameData.brix[j][k].posx - BALL_WIDTH && gameData.brix[j][k].posy <= (gameData.gameBall[i].y + BALL_HEIGHT) && gameData.brix[j][k].posy + BALL_HEIGHT >= gameData.gameBall[i].y && gameData.brix[j][k].health > 0) {
+							gameData.gameBall[i].hspeed = LFT;
+							gameData.brix[j][k].health--;
+							if (gameData.brix[j][k].health == 0) {
+							gameData.brix[j][k].dying = 5;
+							gameData.brix[j][k].health = DEAD;
+							}
+							hitBrick = true;
 
-						gameData.points += gameData.brix[i][j].points;
-					}
+							gameData.points += gameData.brix[j][k].points;
+							players->hiScore = gameData.points;
+						}
 
-					if (hitBrick && gameData.brix[i][j].isSpecial) {
-						for (int k = 0; k < MAX_BRINDES; k++) {
-							if (gameData.brindes[k].posx == -1 && gameData.brindes[k].posy == -1) {
-								gameData.brindes[k].posx = gameData.brix[i][j].posx + BALL_WIDTH * 2;
-								gameData.brindes[k].posy = gameData.brix[i][j].posy;
-								gameData.brindes[k].isMoving = 1;
-								break;
+						if (hitBrick && gameData.brix[j][k].isSpecial) {
+							for (int l = 0; l < MAX_BRINDES; l++) {
+								if (	gameData.brindes[l].posx == -1 && gameData.brindes[l].posy == -1) {
+									gameData.brindes[l].posx = gameData.brix[j][k].posx + BALL_WIDTH * 2;
+									gameData.brindes[l].posy = gameData.brix[j][k].posy;
+									gameData.brindes[l].isMoving = 1;
+									break;
+								}
 							}
 						}
 					}
 				}
+				for (int j = 0; j < MAX_BRINDES; j++) {
+					if(gameData.gameBall[i].y == gameData.brindes[j].posy + BALL_HEIGHT && gameData.brindes[j].posx <= (gameData.gameBall[i].x + BALL_WIDTH) && gameData.brindes[j].posx + BALL_WIDTH >= gameData.gameBall[i].x)
+						gameData.gameBall[i].vspeed = DWN;
+
+					if (gameData.gameBall[i].y == gameData.brindes[j].posy - BALL_HEIGHT && gameData.brindes[j].posx <= (gameData.gameBall[i].x + BALL_WIDTH) && gameData.brindes[j].posx + BALL_WIDTH >= gameData.gameBall[i].x)
+						gameData.gameBall[i].vspeed = UP;
+
+					if (gameData.gameBall[i].x == gameData.brindes[j].posx + BALL_WIDTH && gameData.brindes[j].posy <= (gameData.gameBall[i].y + BALL_HEIGHT) && gameData.brindes[j].posy + BALL_HEIGHT >= gameData.gameBall[i].y)
+						gameData.gameBall[i].hspeed = RGHT;
+
+					if (gameData.gameBall[i].x == gameData.brindes[j].posx - BALL_WIDTH && gameData.brindes[j].posy <= (gameData.gameBall[i].y + BALL_HEIGHT) && gameData.brindes[j].posy + BALL_HEIGHT >= gameData.gameBall[i].y)
+						gameData.gameBall[i].hspeed = LFT;
+				}
+			}
+			else {
+				
 			}
 		}
-
 		SetEvent(hGameChangedEvent);
 
 		SetWaitableTimer(hBallTimer, &liBallTimer, 0, NULL, NULL, 0);
@@ -449,12 +538,20 @@ DWORD WINAPI BrindeThread(LPVOID lpParam) {
 
 					switch (gameData.brindes[index].type) {
 					case SPEED_UP:
+						if (liBallTimer.QuadPart < MAX_SPEED) {
+							liBallTimer.QuadPart += 100000LL;
+						}
 						break;
 					case SPEED_DOWN:
+						if (liBallTimer.QuadPart > MIN_SPEED) {
+							liBallTimer.QuadPart -= 100000LL;
+						}
 						break;
 					case EXTRA_LIFE:
+						players->nLives++;
 						break;
 					case TRIPLE:
+						tripleActive = TRUE;
 						break;
 					}
 				}

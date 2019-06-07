@@ -35,8 +35,8 @@ DWORD WINAPI ReceiveGame(LPVOID lpParam) {
 			_tprintf(TEXT("[TIMEOUT] A conexão foi perdida\n"));
 			break;
 		}
-
-		_tprintf(TEXT("[SERVER] Posição da bola (%d, %d)\n"), gameData.gameBall.x, gameData.gameBall.y);
+		for(int i = 0; i < TRIPLE; i++)
+			_tprintf(TEXT("[SERVER] Posição da bola (%d, %d)\n"), gameData.gameBall[i].x, gameData.gameBall[i].y);
 	}
 
 	return 0;

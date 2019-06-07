@@ -81,7 +81,7 @@ DWORD WINAPI ReceiveGame(LPVOID lpParam) {
 }
 
 int maxX = 0, maxY = 0;
-TCHAR frase[200];
+TCHAR playerScoreString[20];
 HDC barDC, ballDC, loadingDC, memDC, brickDC, brindeDC;
 HBITMAP hBit;
 HBITMAP hBmpBar;
@@ -103,7 +103,7 @@ BITMAP bmpTriple;
 
 LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
 	int value;
-	RECT rect;
+	RECT rect, playerScore;
 	HDC hdc;
 	PAINTSTRUCT ps;
 	HBRUSH hBrush;
@@ -127,12 +127,15 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 		hBrush = CreateSolidBrush(RGB(0, 0, 0));
 
 		SelectObject(memDC, hBrush);
+
 		PatBlt(memDC, 0, 0, maxX, maxY, PATCOPY);
 
 		ReleaseDC(hWnd, hdc);
 
 		hBmpBar = (HBITMAP)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_BITMAP_BAR), IMAGE_BITMAP, 0, 0, LR_DEFAULTSIZE);
+
 		hBmpBall = (HBITMAP)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_BITMAP_BALL), IMAGE_BITMAP, 0, 0, LR_DEFAULTSIZE);
+
 		hBmpLoading = (HBITMAP)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_BITMAP_LOADING), IMAGE_BITMAP, 0, 0, LR_DEFAULTSIZE);
 
 		hBricks[GREEN_BRICK] = (HBITMAP)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_BITMAP_GREEN_BRICK), IMAGE_BITMAP, 0, 0, LR_DEFAULTSIZE);
@@ -147,7 +150,9 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 		hBmpTriple = (HBITMAP)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_BITMAP_TRIPLE), IMAGE_BITMAP, 0, 0, LR_DEFAULTSIZE);
 
 		GetObject(hBmpBar, sizeof(bmpBar), &bmpBar);
+
 		GetObject(hBmpBall, sizeof(bmpBall), &bmpBall);
+		
 		GetObject(hBmpLoading, sizeof(bmpLoading), &bmpLoading);
 
 		GetObject(hBricks[GREEN_BRICK], sizeof(bmpBricks[GREEN_BRICK]), &bmpBricks[GREEN_BRICK]);
@@ -177,6 +182,7 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 			FillRect(memDC, &rcBack, hBrush);
 
 			if (gameData.isRunning) {
+
 				brickDC = CreateCompatibleDC(memDC);
 				barDC = CreateCompatibleDC(memDC);
 				ballDC = CreateCompatibleDC(memDC);
@@ -185,7 +191,9 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 				SelectObject(barDC, hBmpBar);  // colocar bitmap no DC
 				SelectObject(ballDC, hBmpBall);  // colocar bitmap no DC
 				BitBlt(memDC, gameData.gameBar.pos, gameData.max_y - 8, bmpBar.bmWidth, bmpBar.bmHeight, barDC, 0, 0, SRCCOPY);
-				BitBlt(memDC, gameData.gameBall.x, gameData.gameBall.y, bmpBall.bmWidth, bmpBall.bmHeight, ballDC, 0, 0, SRCAND);
+
+				for(int i = 0; i < TRIPLE; i++)
+					BitBlt(memDC, gameData.gameBall[i].x, gameData.gameBall[i].y, bmpBall.bmWidth, bmpBall.bmHeight, ballDC, 0, 0, SRCAND);
 
 				for (int i = 0; i < MAX_BRIX_HEIGHT; i++){
 					for (int j = 0; j < MAX_BRIX_WIDTH; j++) {
@@ -237,13 +245,14 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 						}
 
 						_stprintf_s(positions, 50, TEXT("~x: %d y: %d"), gameData.brindes[i].posx, gameData.brindes[i].posy);
-
-						rcBack.left = 250;
-						rcBack.top = 10;
 					}
 				}
 
-				
+				GetClientRect(hWnd, &playerScore);
+				playerScore.top = 20;
+				playerScore.left = MAX_X + 50;
+				_stprintf_s(playerScoreString, 20, TEXT("%s Points: %d"), data.tUsername, gameData.points);
+				DrawText(memDC, playerScoreString, _tcsclen(playerScoreString), &playerScore, DT_SINGLELINE | DT_NOCLIP);
 
 				DeleteDC(brindeDC);
 				DeleteDC(brickDC);
@@ -260,14 +269,14 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 			}
 		}
 
+		hdc = BeginPaint(hWnd, &ps);
+
 		GetClientRect(hWnd, &rect);
 		SetTextColor(memDC, RGB(255, 255, 255));
 		SetBkMode(memDC, TRANSPARENT);
 		rect.left = 0;
 		rect.top = 0;
-
-		hdc = BeginPaint(hWnd, &ps);
-
+		
 		BitBlt(hdc, 0, 0, maxX, maxY, memDC, 0, 0, SRCCOPY);
 
 		EndPaint(hWnd, &ps);
