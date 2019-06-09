@@ -73,15 +73,16 @@ DWORD WINAPI ReceiveGame(LPVOID lpParam) {
 			_tprintf(TEXT("[TIMEOUT] A conexão foi perdida\n"));
 			termina = 1;
 		}
-		else
+		else {
 			InvalidateRect(hWnd_global, NULL, TRUE);
+		}
 	}
 
 	return 0;
 }
 
 int maxX = 0, maxY = 0;
-TCHAR playerScoreString[20];
+TCHAR playerScoreString[30];
 HDC barDC, ballDC, loadingDC, memDC, brickDC, brindeDC;
 HBITMAP hBit;
 HBITMAP hBmpBar;
@@ -251,7 +252,7 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 				GetClientRect(hWnd, &playerScore);
 				playerScore.top = 20;
 				playerScore.left = MAX_X + 50;
-				_stprintf_s(playerScoreString, 20, TEXT("%s Points: %d"), data.tUsername, gameData.points);
+				_stprintf_s(playerScoreString, 30, TEXT("%s Points: %d Life: %d"), data.tUsername, gameData.points, data.nLives);
 				DrawText(memDC, playerScoreString, _tcsclen(playerScoreString), &playerScore, DT_SINGLELINE | DT_NOCLIP);
 
 				DeleteDC(brindeDC);
@@ -298,6 +299,9 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 				MessageBox(hWnd, tPrintableMessage, TEXT("Sucesso!"), MB_ICONINFORMATION | MB_OK);
 
 				EnableMenuItem(GetMenu(hWnd), ID_LOGIN, MF_DISABLED);
+
+				if (gameData.isRunning)
+					data.isPlaying = 1;
 
 				hGameThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ReceiveGame, NULL, 0, NULL);
 			}

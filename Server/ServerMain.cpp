@@ -260,6 +260,7 @@ DWORD WINAPI MessageThread(LPVOID lpArg) {
 
 					_tcscpy(players[nPlayers].tUsername, (*lpMessageBuffer)[1]);
 					players[nPlayers].hiScore = 0;
+					players[nPlayers].nLives = INITIAL_LIVES;
 
 					_tprintf(TEXT("[LOGIN] O utilizador %s fez login\n"), players[nPlayers].tUsername);
 
@@ -271,6 +272,9 @@ DWORD WINAPI MessageThread(LPVOID lpArg) {
 
 					players[nPlayers].hReadEvent = CreateEvent(NULL, FALSE, FALSE, players[nPlayers].tReadEventName);
 					players[nPlayers].hHasReadEvent = CreateEvent(NULL, FALSE, FALSE, players[nPlayers].tHasReadEventName);
+
+					if (gameData.isRunning)
+						players[nPlayers].isPlaying = 0;
 
 					nPlayers++;
 
@@ -297,42 +301,51 @@ DWORD WINAPI MessageThread(LPVOID lpArg) {
 				}
 			}
 		}
-		//for (int i = 0; i < TRIPLE; i++) {
-			if (_tcscmp((*lpMessageBuffer)[0], LEFT) == 0) {
-				if (gameData.gameBar.pos > 0) {
-					gameData.gameBar.pos--;
+		if (_tcscmp((*lpMessageBuffer)[0], LEFT) == 0) {
+			for (int i = 0; i < nPlayers; i++) {
+				if (_tcscmp((*lpMessageBuffer)[1], players[i].tUsername) == 0 && players[i].isPlaying) {
+					if (gameData.gameBar.pos > 0) {
+						gameData.gameBar.pos--;
 
+						for (int i = 0; i < TRIPLE; i++) {
+							if (!gameData.gameBall[i].isMoving)
+								gameData.gameBall[i].x--;
+						}
+
+						SetEvent(hGameChangedEvent);
+					}
+				}
+			}
+		}
+
+		if (_tcscmp((*lpMessageBuffer)[0], RIGHT) == 0) {
+			for (int i = 0; i < nPlayers; i++) {
+				if (_tcscmp((*lpMessageBuffer)[1], players[i].tUsername) == 0 && players[i].isPlaying) {
+					if (gameData.gameBar.pos + IMAGE_WIDTH < MAX_X) {
+						gameData.gameBar.pos++;
+
+						for (int i = 0; i < TRIPLE; i++) {
+							if (!gameData.gameBall[i].isMoving)
+								gameData.gameBall[i].x++;
+						}
+						SetEvent(hGameChangedEvent);
+					}
+				}
+			}
+		}
+
+		if (_tcscmp((*lpMessageBuffer)[0], SPACE) == 0) {
+			for (int i = 0; i < nPlayers; i++) {
+				if (_tcscmp((*lpMessageBuffer)[1], players[i].tUsername) == 0 && players[i].isPlaying) {
 					for (int i = 0; i < TRIPLE; i++) {
 						if (!gameData.gameBall[i].isMoving)
-							gameData.gameBall[i].x--;
+							gameData.gameBall[i].isMoving = 1;
 					}
 
 					SetEvent(hGameChangedEvent);
 				}
 			}
-
-			if (_tcscmp((*lpMessageBuffer)[0], RIGHT) == 0) {
-				if (gameData.gameBar.pos + IMAGE_WIDTH < MAX_X) {
-					gameData.gameBar.pos++;
-
-					for (int i = 0; i < TRIPLE; i++) {
-						if (!gameData.gameBall[i].isMoving)
-							gameData.gameBall[i].x++;
-					}
-					SetEvent(hGameChangedEvent);
-				}
-			}
-
-			if (_tcscmp((*lpMessageBuffer)[0], SPACE) == 0) {
-
-				for (int i = 0; i < TRIPLE; i++) {
-					if (!gameData.gameBall[i].isMoving)
-						gameData.gameBall[i].isMoving = 1;
-				}
-				
-				SetEvent(hGameChangedEvent);
-			}
-		//}
+		}
 	}
 
 	return 0;
@@ -350,7 +363,7 @@ DWORD WINAPI BallThread(LPVOID lpArg) {
 	while (gameData.isRunning && !termina) {
 		for (int i = 0; i < TRIPLE; i++) {
 			if (i == MAIN_BALL && !gameData.gameBall[MAIN_BALL].isMoving && !firstBallPlaced) {
-				gameData.gameBall[i].hspeed = 1;
+				gameData.gameBall[i].hspeed = 0;
 				gameData.gameBall[i].vspeed = -1;
 
 				gameData.gameBall[i].y = gameData.max_y - IMAGE_WIDTH / 2 - 1;
@@ -419,6 +432,10 @@ DWORD WINAPI BallThread(LPVOID lpArg) {
 						gameData.gameBall[i].vspeed = 0;
 
 						gameData.gameBall[i].isMoving = 0;
+					}
+
+					for (int i = 0; i < nPlayers; i++) {
+						players[i].isPlaying = 1;
 					}
 				}
 

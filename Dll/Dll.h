@@ -17,6 +17,7 @@
 #define MIN_SPEED -800000LL
 #define INITIAL_LIVES 3
 #define MAIN_BALL 0
+#define MAX_PLAYERS 20
 
 //Zona de tamanhos para buffers
 #define TAM 50
@@ -85,6 +86,7 @@ typedef struct {
 	TCHAR tReadEventName[TTAM];
 	TCHAR tHasReadEventName[TTAM];
 	int nLives;
+	int isPlaying;
 } player, *pPlayer;
 
 typedef struct {
