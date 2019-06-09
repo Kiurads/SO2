@@ -433,10 +433,6 @@ DWORD WINAPI BallThread(LPVOID lpArg) {
 
 						gameData.gameBall[i].isMoving = 0;
 					}
-
-					for (int i = 0; i < nPlayers; i++) {
-						players[i].isPlaying = 1;
-					}
 				}
 
 				if (gameData.gameBall[i].y == gameData.max_y - IMAGE_HEIGHT * 2 && gameData.gameBar.pos <= (gameData.gameBall[i].x + BALL_WIDTH) && gameData.gameBar.pos + IMAGE_WIDTH >= gameData.gameBall[i].x)
