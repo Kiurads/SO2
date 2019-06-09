@@ -300,9 +300,6 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 
 				EnableMenuItem(GetMenu(hWnd), ID_LOGIN, MF_DISABLED);
 
-				if (gameData.isRunning)
-					data.isPlaying = 1;
-
 				hGameThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ReceiveGame, NULL, 0, NULL);
 			}
 
