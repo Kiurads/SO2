@@ -9,6 +9,8 @@ HANDLE hMessageThread;
 HANDLE hBallTimer;
 HANDLE hBrindeTimer;
 HANDLE hBrindeThread;
+HANDLE hRemoteMessageThread;
+DWORD dwRemoteThreadID;
 DWORD dwGameThreadId;
 DWORD dwBallThreadId;
 DWORD dwLoginThreadId;
@@ -17,12 +19,179 @@ DWORD dwSize;
 DWORD dwBrindeThreadId;
 game gameData;
 
+HANDLE hServerPipeMutex;
+HANDLE hServerPipe;
+HANDLE hClientPipe;
+
 BOOL firstBallPlaced = FALSE;
 BOOL tripleActive = FALSE;
 
 LARGE_INTEGER liBallTimer, liBrindeTimer;
 int termina;
 int nPlayers;
+int isRemote;
+
+TCHAR RemoteMessage[2][BUFFER_MAX_SIZE];
+
+DWORD WINAPI RemoteMessageThread(LPVOID lpArg) {
+	UNREFERENCED_PARAMETER(lpArg);
+	BOOL check = FALSE;
+
+	while (!termina) {
+
+		for (int i = 0; i < nPlayers; i++) {
+			if (players[i].isRemote)
+				check = TRUE;
+		}
+
+		if (check == FALSE) {
+			if (!ConnectNamedPipe(hServerPipe, NULL)) {
+				return -1;
+			}
+
+			if (!ReadFile(hServerPipe, &RemoteMessage, sizeof(RemoteMessage), &nBytes, NULL))
+				return -1;
+
+			if (nBytes != sizeof(RemoteMessage))
+				return -1;
+
+			_tprintf(TEXT("Login Received"));
+
+			if (_tcscmp((RemoteMessage)[0], LOGIN) == 0) {	//Login
+				int duplicate = 0;
+
+				if (_tcslen((RemoteMessage)[1]) > 0) {
+
+
+					for (int i = 0; i < nPlayers; i++) {
+						if (_tcscmp(RemoteMessage[1], players->tUsername) == 0) {
+							duplicate = 1;
+							break;
+						}
+					}
+
+					if (!duplicate) {
+						players = (pPlayer)realloc(players, sizeof(player) * (nPlayers + 1));
+
+						_tcscpy(players[nPlayers].tUsername, (RemoteMessage)[1]);
+						players[nPlayers].hiScore = 0;
+						players[nPlayers].nLives = INITIAL_LIVES;
+						players[nPlayers].isRemote = 1;
+
+						_tprintf(TEXT("[LOGIN] O utilizador %s fez login\n"), players[nPlayers].tUsername);
+
+						_tcscpy(players[nPlayers].tReadEventName, GAME_READ_EVENT);
+						_tcscat(players[nPlayers].tReadEventName, players[nPlayers].tUsername);
+
+						_stprintf((RemoteMessage[0]), TEXT("%s"), GAME_READ_EVENT);
+						_stprintf((RemoteMessage[1]), TEXT("\0"));
+
+						WriteFile(hClientPipe, RemoteMessage, sizeof(RemoteMessage), &nBytes, NULL);
+
+						if (nBytes != sizeof(RemoteMessage))
+							return -1;
+
+						_tcscpy(players[nPlayers].tHasReadEventName, GAME_HAS_READ_EVENT);
+						_tcscat(players[nPlayers].tHasReadEventName, players[nPlayers].tUsername);
+
+						players[nPlayers].hReadEvent = CreateEvent(NULL, FALSE, FALSE, players[nPlayers].tReadEventName);
+						players[nPlayers].hHasReadEvent = CreateEvent(NULL, FALSE, FALSE, players[nPlayers].tHasReadEventName);
+
+						_stprintf((RemoteMessage[0]), TEXT("%s"), GAME_HAS_READ_EVENT);
+						_stprintf((RemoteMessage[1]), TEXT("\0"));
+
+						WriteFile(hClientPipe, RemoteMessage, sizeof(RemoteMessage), &nBytes, NULL);
+
+						if (nBytes != sizeof(RemoteMessage))
+							return -1;
+
+						if (gameData.isRunning)
+							players[nPlayers].isPlaying = 0;
+
+						nPlayers++;
+
+						SetEvent(hLoggedEvent);
+					}
+				}
+			}
+		}
+		else {
+			if (!ReadFile(hServerPipe, RemoteMessage, sizeof(RemoteMessage), &nBytes, NULL))
+				return -1;
+
+			if (nBytes != sizeof(RemoteMessage))
+				return -1;
+
+			_tprintf(TEXT("Key Message Received"));
+
+			if (_tcscmp((RemoteMessage)[0], EXIT) == 0) {	//Logout
+				for (int i = 0; i < nPlayers; i++) {
+					if (_tcscmp((RemoteMessage)[1], players->tUsername) == 0) {
+						_tprintf(TEXT("[LOGOUT] O utilizador %s fez logout\n"), players[i].tUsername);
+
+						CloseHandle(players[i].hReadEvent);
+						CloseHandle(players[i].hHasReadEvent);
+
+						nPlayers--;
+
+						for (int j = i; j < nPlayers; j++) {
+							players[j] = players[j + 1];
+						}
+
+						players = (pPlayer)realloc(players, sizeof(player) * nPlayers);
+					}
+				}
+			}
+			if (_tcscmp((RemoteMessage)[0], LEFT) == 0) {
+				for (int i = 0; i < nPlayers; i++) {
+					if (_tcscmp((RemoteMessage)[1], players[i].tUsername) == 0 && players[i].isPlaying) {
+						if (gameData.gameBar.pos > 0) {
+							gameData.gameBar.pos--;
+
+							for (int i = 0; i < TRIPLE; i++) {
+								if (!gameData.gameBall[i].isMoving)
+									gameData.gameBall[i].x--;
+							}
+
+							SetEvent(hGameChangedEvent);
+						}
+					}
+				}
+			}
+
+			if (_tcscmp((RemoteMessage)[0], RIGHT) == 0) {
+				for (int i = 0; i < nPlayers; i++) {
+					if (_tcscmp((RemoteMessage)[1], players[i].tUsername) == 0 && players[i].isPlaying) {
+						if (gameData.gameBar.pos + IMAGE_WIDTH < MAX_X) {
+							gameData.gameBar.pos++;
+
+							for (int i = 0; i < TRIPLE; i++) {
+								if (!gameData.gameBall[i].isMoving)
+									gameData.gameBall[i].x++;
+							}
+							SetEvent(hGameChangedEvent);
+						}
+					}
+				}
+			}
+
+			if (_tcscmp((RemoteMessage)[0], SPACE) == 0) {
+				for (int i = 0; i < nPlayers; i++) {
+					if (_tcscmp((RemoteMessage)[1], players[i].tUsername) == 0 && players[i].isPlaying) {
+						for (int i = 0; i < TRIPLE; i++) {
+							if (!gameData.gameBall[i].isMoving)
+								gameData.gameBall[i].isMoving = 1;
+						}
+
+						SetEvent(hGameChangedEvent);
+					}
+				}
+			}
+		}
+	}
+
+	return 0;
+}
 
 int _tmain(int argc, LPTSTR argv) {
 #ifdef UNICODE
@@ -46,8 +215,9 @@ int _tmain(int argc, LPTSTR argv) {
 		exit(-1);
 	}
 
-	hMessageThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MessageThread, NULL, NULL, &dwLoginThreadId);
 	hGameThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)GameThread, NULL, NULL, &dwGameThreadId);
+	hMessageThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)MessageThread, NULL, NULL, &dwLoginThreadId);
+	hRemoteMessageThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)RemoteMessageThread, NULL, NULL, &dwRemoteThreadID);
 
 	while (!termina) {
 		_tscanf(TEXT("%s"), buffer);
@@ -73,15 +243,15 @@ int _tmain(int argc, LPTSTR argv) {
 		if (_tcscmp(buffer, TEXT("cls")) == 0) system("cls");
 	}
 
-	
+
 
 	WaitForSingleObject(hBallThread, INFINITE);
 	WaitForSingleObject(hGameThread, INFINITE);
-	
+
 	WaitForSingleObject(hBrindeThread, INFINITE);
-	
+
 	UnmapViewOfFile(lpMessageBuffer);
-	UnmapViewOfFile(gMappedGame);
+	UnmapViewOfFile(gGameData);
 	CloseHandle(hGameMapFile);
 	CloseHandle(hReadEvent);
 	CloseHandle(hMessageMutex);
@@ -90,14 +260,15 @@ int _tmain(int argc, LPTSTR argv) {
 	CloseHandle(hReadEvent);
 	CloseHandle(hHasReadEvent);
 	CloseHandle(hBallTimer);
-	
+
 	CloseHandle(hBrindeThread);
-	
+
 
 	return 0;
 }
 
 int setupServer() {
+	hServerPipeMutex = CreateMutex(NULL, FALSE, MESSAGE_MUTEX_NAME);
 	hGameChangedEvent = CreateEvent(NULL, FALSE, FALSE, GAME_CHANGED_EVENT_NAME);
 
 	hMessageMapFile = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, sizeof(TCHAR[2][BUFFER_MAX_SIZE]), MESSAGE_FILE_NAME);
@@ -106,8 +277,11 @@ int setupServer() {
 	hMessageEvent = CreateEvent(NULL, FALSE, FALSE, LOGIN_EVENT_NAME);
 	hLoggedEvent = CreateEvent(NULL, FALSE, FALSE, LOGGED_EVENT_NAME);
 
-	hGameMapFile = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, BUFFER_MAX_SIZE, GAME_FILE_NAME);
-	gMappedGame = (game(*))MapViewOfFile(hGameMapFile, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(game));
+	hGameMapFile = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, sizeof(game), GAME_FILE_NAME);
+	gGameData = (game(*))MapViewOfFile(hGameMapFile, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(game));
+
+	_tprintf(TEXT("%d"), GetLastError());
+
 	hReadEvent = CreateEvent(NULL, FALSE, FALSE, GAME_READ_EVENT);
 	hHasReadEvent = CreateEvent(NULL, FALSE, FALSE, GAME_HAS_READ_EVENT);
 
@@ -115,11 +289,22 @@ int setupServer() {
 
 	hBrindeTimer = CreateWaitableTimer(NULL, TRUE, NULL);
 
+	hServerPipe = CreateNamedPipe(SERVER_PIPE_NAME, PIPE_ACCESS_DUPLEX, PIPE_WAIT | PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE, 1, sizeof(RemoteMessage), sizeof(RemoteMessage), 2000, NULL);
+
+	hClientPipe = CreateNamedPipe(CLIENT_PIPE_NAME, PIPE_ACCESS_OUTBOUND, PIPE_WAIT
+		| PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE, 1, sizeof(RemoteMessage), sizeof(RemoteMessage), 2000, NULL);
+
+	if (hServerPipe == INVALID_HANDLE_VALUE || hClientPipe == INVALID_HANDLE_VALUE) {
+		CloseHandle(hServerPipe);
+		return -1;
+	}
+
+
 	for (int i = 0; i < TRIPLE; i++) {
-		
+
 		gameData.gameBall[i].y = -1;
 		gameData.gameBall[i].x = -1;
-	
+
 		gameData.gameBall[i].speed = 1;
 		gameData.gameBall[i].isMoving = 0;
 
@@ -261,6 +446,7 @@ DWORD WINAPI MessageThread(LPVOID lpArg) {
 					_tcscpy(players[nPlayers].tUsername, (*lpMessageBuffer)[1]);
 					players[nPlayers].hiScore = 0;
 					players[nPlayers].nLives = INITIAL_LIVES;
+					players[nPlayers].isRemote = 0;
 
 					_tprintf(TEXT("[LOGIN] O utilizador %s fez login\n"), players[nPlayers].tUsername);
 
@@ -363,15 +549,15 @@ DWORD WINAPI BallThread(LPVOID lpArg) {
 	while (gameData.isRunning && !termina) {
 		for (int i = 0; i < TRIPLE; i++) {
 			if (i == MAIN_BALL && !gameData.gameBall[MAIN_BALL].isMoving && !firstBallPlaced) {
-				gameData.gameBall[i].hspeed = 0;
+				gameData.gameBall[i].hspeed = 1;
 				gameData.gameBall[i].vspeed = -1;
 
 				gameData.gameBall[i].y = gameData.max_y - IMAGE_WIDTH / 2 - 1;
-				gameData.gameBall[i].x = gameData.gameBar.pos +(IMAGE_WIDTH / 2 - IMAGE_HEIGHT / 2) - 1;
+				gameData.gameBall[i].x = gameData.gameBar.pos + (IMAGE_WIDTH / 2 - IMAGE_HEIGHT / 2) - 1;
 
 				firstBallPlaced = TRUE;
 			}
-			else if(tripleActive){
+			else if (tripleActive) {
 				switch (rand() % 2) {
 				case 0:
 					gameData.gameBall[i].hspeed = -1;
@@ -388,7 +574,7 @@ DWORD WINAPI BallThread(LPVOID lpArg) {
 
 				count++;
 
-				if(count >= 2)
+				if (count >= 2)
 					tripleActive = FALSE;
 
 			}
@@ -412,7 +598,7 @@ DWORD WINAPI BallThread(LPVOID lpArg) {
 
 					/*if (i == MAIN_BALL && players->nLives <= 0)//update scoreboard
 						break;*/
-					
+
 					if (i == MAIN_BALL) {
 						gameData.gameBall[i].y = gameData.max_y - (IMAGE_HEIGHT * 2) - 1;
 						gameData.gameBall[i].x = gameData.gameBar.pos + (IMAGE_WIDTH / 2 - IMAGE_HEIGHT / 2) - 1;  //->|___________|<-
@@ -482,8 +668,8 @@ DWORD WINAPI BallThread(LPVOID lpArg) {
 							gameData.gameBall[i].hspeed = LFT;
 							gameData.brix[j][k].health--;
 							if (gameData.brix[j][k].health == 0) {
-							gameData.brix[j][k].dying = 5;
-							gameData.brix[j][k].health = DEAD;
+								gameData.brix[j][k].dying = 5;
+								gameData.brix[j][k].health = DEAD;
 							}
 							hitBrick = true;
 
@@ -493,7 +679,7 @@ DWORD WINAPI BallThread(LPVOID lpArg) {
 
 						if (hitBrick && gameData.brix[j][k].isSpecial) {
 							for (int l = 0; l < MAX_BRINDES; l++) {
-								if (	gameData.brindes[l].posx == -1 && gameData.brindes[l].posy == -1) {
+								if (gameData.brindes[l].posx == -1 && gameData.brindes[l].posy == -1) {
 									gameData.brindes[l].posx = gameData.brix[j][k].posx + BALL_WIDTH * 2;
 									gameData.brindes[l].posy = gameData.brix[j][k].posy;
 									gameData.brindes[l].isMoving = 1;
@@ -504,7 +690,7 @@ DWORD WINAPI BallThread(LPVOID lpArg) {
 					}
 				}
 				for (int j = 0; j < MAX_BRINDES; j++) {
-					if(gameData.gameBall[i].y == gameData.brindes[j].posy + BALL_HEIGHT && gameData.brindes[j].posx <= (gameData.gameBall[i].x + BALL_WIDTH) && gameData.brindes[j].posx + BALL_WIDTH >= gameData.gameBall[i].x)
+					if (gameData.gameBall[i].y == gameData.brindes[j].posy + BALL_HEIGHT && gameData.brindes[j].posx <= (gameData.gameBall[i].x + BALL_WIDTH) && gameData.brindes[j].posx + BALL_WIDTH >= gameData.gameBall[i].x)
 						gameData.gameBall[i].vspeed = DWN;
 
 					if (gameData.gameBall[i].y == gameData.brindes[j].posy - BALL_HEIGHT && gameData.brindes[j].posx <= (gameData.gameBall[i].x + BALL_WIDTH) && gameData.brindes[j].posx + BALL_WIDTH >= gameData.gameBall[i].x)
@@ -518,7 +704,7 @@ DWORD WINAPI BallThread(LPVOID lpArg) {
 				}
 			}
 			else {
-				
+
 			}
 		}
 		SetEvent(hGameChangedEvent);
@@ -537,7 +723,7 @@ DWORD WINAPI BrindeThread(LPVOID lpParam) {
 
 	while (gameData.isRunning) {
 		WaitForSingleObject(hBrindeTimer, INFINITE);
-		
+
 		for (int index = 0; index < MAX_BRINDES; index++) {
 
 			if (gameData.brindes[index].posy != -1) {
@@ -588,36 +774,64 @@ DWORD WINAPI GameThread(LPVOID lpParam) {
 	while (!termina) {
 		WaitForSingleObject(hGameChangedEvent, INFINITE);
 
-		(*gMappedGame) = gameData;
+		(*gGameData) = gameData;
 
 		currentPlayers = nPlayers;
 
 		for (int i = 0; i < currentPlayers; i++) {
-			SetEvent(players[i].hReadEvent);
+			if (players[i].isRemote) {
+				WriteFile(hClientPipe, &gameData, sizeof(game), &nBytes, NULL);
+				if (nBytes != sizeof(game)) {
+					_tprintf(TEXT("[TIMEOUT] O utilizador %s deu timeout\n"), players[i].tUsername);
+
+					CloseHandle(players[i].hReadEvent);
+					CloseHandle(players[i].hHasReadEvent);
+
+					nPlayers--;
+
+					currentPlayers = nPlayers;
+
+					for (int j = i; j < currentPlayers; j++) {
+						players[j] = players[j + 1];
+					}
+
+					players = (pPlayer)realloc(players, sizeof(player) * nPlayers);
+
+					i--;
+
+					break;
+				}
+			}
+			else
+				SetEvent(players[i].hReadEvent);
 		}
 
 		for (int i = 0; i < currentPlayers; i++) {
-			dwWaitResult = WaitForSingleObject(players[i].hHasReadEvent, 5000);
+			if (!players[i].isRemote) {
+				dwWaitResult = WaitForSingleObject(players[i].hHasReadEvent, 5000);
 
-			if (dwWaitResult != WAIT_OBJECT_0) {
-				_tprintf(TEXT("[TIMEOUT] O utilizador %s deu timeout\n"), players[i].tUsername);
+				if (dwWaitResult != WAIT_OBJECT_0) {
+					_tprintf(TEXT("[TIMEOUT] O utilizador %s deu timeout\n"), players[i].tUsername);
 
-				CloseHandle(players[i].hReadEvent);
-				CloseHandle(players[i].hHasReadEvent);
+					CloseHandle(players[i].hReadEvent);
+					CloseHandle(players[i].hHasReadEvent);
 
-				nPlayers--;
+					nPlayers--;
 
-				currentPlayers = nPlayers;
+					currentPlayers = nPlayers;
 
-				for (int j = i; j < currentPlayers; j++) {
-					players[j] = players[j + 1];
+					for (int j = i; j < currentPlayers; j++) {
+						players[j] = players[j + 1];
+					}
+
+					players = (pPlayer)realloc(players, sizeof(player) * nPlayers);
+
+					i--;
 				}
-
-				players = (pPlayer)realloc(players, sizeof(player) * nPlayers);
-
-				i--;
 			}
 		}
+
+
 	}
 
 	return 0;

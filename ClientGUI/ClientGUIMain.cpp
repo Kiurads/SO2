@@ -11,6 +11,31 @@ TCHAR szProgName[TAM] = TEXT("Breakout - Client");
 
 TCHAR tPrintableMessage[200];
 
+int maxX = 0, maxY = 0;
+TCHAR playerScoreString[30];
+HDC barDC, ballDC, loadingDC, memDC, brickDC, brindeDC;
+HBITMAP hBit;
+HBITMAP hBmpBar;
+HBITMAP hBricks[5];
+HBITMAP hBmpBall;
+HBITMAP hBmpLoading;
+HBITMAP hBmpLife;
+HBITMAP hBmpSpeedUp;
+HBITMAP hBmpSpeedDown;
+HBITMAP hBmpTriple;
+BITMAP bmpBar;
+BITMAP bmpBall;
+BITMAP bmpLoading;
+BITMAP bmpBricks[5];
+BITMAP bmpLife;
+BITMAP bmpSpeedUp;
+BITMAP bmpSpeedDown;
+BITMAP bmpTriple;
+
+HANDLE hServerPipe;
+HANDLE hClientPipe;
+BOOL isPipeSuccess = false;
+
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmdLine, int nCmdShow) {
 #ifdef UNICODE
 	_setmode(_fileno(stdin), _O_WTEXT);
@@ -58,7 +83,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmdLine, int nC
 
 	termina = 1;
 
-	if(hGameThread != NULL)
+	if (hGameThread != NULL)
 		WaitForSingleObject(hGameThread, INFINITE);
 
 	CloseClient();
@@ -80,27 +105,6 @@ DWORD WINAPI ReceiveGame(LPVOID lpParam) {
 
 	return 0;
 }
-
-int maxX = 0, maxY = 0;
-TCHAR playerScoreString[30];
-HDC barDC, ballDC, loadingDC, memDC, brickDC, brindeDC;
-HBITMAP hBit;
-HBITMAP hBmpBar;
-HBITMAP hBricks[5];
-HBITMAP hBmpBall;
-HBITMAP hBmpLoading;
-HBITMAP hBmpLife;
-HBITMAP hBmpSpeedUp;
-HBITMAP hBmpSpeedDown;
-HBITMAP hBmpTriple;
-BITMAP bmpBar;
-BITMAP bmpBall;
-BITMAP bmpLoading;
-BITMAP bmpBricks[5];
-BITMAP bmpLife;
-BITMAP bmpSpeedUp;
-BITMAP bmpSpeedDown;
-BITMAP bmpTriple;
 
 LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
 	int value;
@@ -305,6 +309,27 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 
 			break;
 
+		case ID_REMOTO:
+			memset(tPrintableMessage, '\0', sizeof(TCHAR) * 200);
+
+			DialogBox(NULL, MAKEINTRESOURCE(IDD_DIALOG_LOGIN), hWnd, (DLGPROC)LoginEventHandler);
+
+			if (_tcslen(tPrintableMessage) == 0) {
+				MessageBeep(MB_ICONERROR);
+				MessageBox(hWnd, TEXT("Login falhou"), TEXT("ERRO"), MB_ICONERROR | MB_OK);
+			}
+			else {
+				MessageBeep(MB_ICONINFORMATION);
+				MessageBox(hWnd, tPrintableMessage, TEXT("Sucesso!"), MB_ICONINFORMATION | MB_OK);
+
+				EnableMenuItem(GetMenu(hWnd), ID_REMOTO, MF_DISABLED);
+
+				isRemote = 1;
+				hGameThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ReceiveGame, NULL, 0, NULL);
+			}
+
+			break;
+
 		case ID_SOBRE:	//Sobre
 			DialogBox(NULL, MAKEINTRESOURCE(IDD_DIALOG_ABOUT), hWnd, (DLGPROC)AboutEventHandler);
 			break;
@@ -418,6 +443,7 @@ LRESULT CALLBACK AboutEventHandler(HWND hWnd, UINT message, WPARAM wParam, LPARA
 	case WM_CLOSE:
 		EndDialog(hWnd, 0);
 		return TRUE;
+		break;
 
 	default:
 		return DefWindowProc(hWnd, message, wParam, lParam);

@@ -24,19 +24,22 @@
 #define IDB_BITMAP_SPEED_DOWN           126
 #define IDB_BITMAP2                     127
 #define IDB_BITMAP_TRIPLE               127
+#define IDD_DIALOG_REMOTE               128
 #define IDC_EDIT1                       1001
 #define IDC_USERNAME                    1001
 #define ID_LOGIN                        40001
 #define ID_SAIR                         40002
 #define ID_SOBRE                        40003
 #define ID_SAIR40004                    40004
+#define ID_LOGINREMOTO                  40005
+#define ID_REMOTO                       40006
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        128
-#define _APS_NEXT_COMMAND_VALUE         40005
+#define _APS_NEXT_RESOURCE_VALUE        130
+#define _APS_NEXT_COMMAND_VALUE         40007
 #define _APS_NEXT_CONTROL_VALUE         1002
 #define _APS_NEXT_SYMED_VALUE           101
 #endif

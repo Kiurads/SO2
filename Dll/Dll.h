@@ -7,6 +7,11 @@
 //Definir uma constante para facilitar a leitura do prot�tipo da fun��o
 //Este .h deve ser inclu�do no projeto que o vai usar (modo impl�cito)
 
+//Pipes e Remote Client info
+
+#define SERVER_PIPE_NAME TEXT("\\\\.\\pipe\\server")
+#define CLIENT_PIPE_NAME TEXT("\\\\.\\pipe\\client%d")
+
 //Zona de dados do jogo
 #define TOP 10
 #define MAX_X 320
@@ -69,6 +74,7 @@
 
 //Zona para nomes de mutexes
 #define MESSAGE_MUTEX_NAME TEXT("MessageMutex")
+#define SERVER_PIPE_MUTEX TEXT("ServerMutex")
 
 //Zona para mensagens
 #define LOGIN TEXT("Login")
@@ -87,6 +93,7 @@ typedef struct {
 	TCHAR tHasReadEventName[TTAM];
 	int nLives;
 	int isPlaying;
+	int isRemote;
 } player, *pPlayer;
 
 typedef struct {
@@ -124,9 +131,10 @@ typedef struct {
 
 typedef struct {
 	ball gameBall[TRIPLE];
-	bar gameBar;
+	bar gameBar;// [MAX_PLAYERS];
 	brick brix[MAX_BRIX_HEIGHT][MAX_BRIX_WIDTH];
 	brinde brindes[MAX_BRINDES];
+	int nPlayers;
 	int points;
 	int isRunning;
 	int	max_x;
@@ -147,25 +155,28 @@ extern "C"
 	//Variáveis globais da DLL
 	extern DLL_APIS HANDLE hGameChangedEvent;
 	extern DLL_APIS HANDLE hGameMapFile;
-	extern DLL_APIS game *gMappedGame;
+	extern DLL_APIS game *gGameData;
 	extern DLL_APIS HANDLE hReadEvent;
 	extern DLL_APIS HANDLE hHasReadEvent;
 	extern DLL_APIS HANDLE hMessageMapFile;
 	extern DLL_APIS HANDLE hMessageEvent;
 	extern DLL_APIS HANDLE hLoggedEvent;
 	extern DLL_APIS TCHAR(*lpMessageBuffer)[2][BUFFER_MAX_SIZE];
+	extern DLL_APIS TCHAR RemoteMessage[2][BUFFER_MAX_SIZE];
 	extern DLL_APIS	HANDLE hMessageMutex;
 	extern DLL_APIS HANDLE hLoginPipe;
 	extern DLL_APIS BOOL success;
 	extern DLL_APIS DWORD nBytes;
 	extern DLL_APIS TCHAR tName[TAM], buffer[BUFFER_MAX_SIZE];
 	extern DLL_APIS int iAuthReply;
+	extern DLL_APIS int isRemote;
 
 	//Funções a serem exportadas/importadas
 	DLL_APIS int Login(pPlayer data);
 	DLL_APIS int ReceiveBroadcast(pGame gameData);
 	DLL_APIS int SendMsg(player data, TCHAR *msg);
-	DLL_APIS int ReceiveMessage(void);
 	DLL_APIS void SetupClient(pPlayer data, pGame gameData);
 	DLL_APIS void CloseClient(void);
+
+	DLL_APIS int ReceiveMessage(void);
 }
