@@ -56,7 +56,8 @@ void SetupClient(pPlayer data, pGame gameData) {
 		}
 	}
 
-	gameData->gameBar.pos = MAX_X / 2;
+	for(int i = 0; i < gameData->nPlayers; i++)
+		gameData->gameBar[i].pos = MAX_X / 2;
 
 	gameData->isRunning = 0;
 	gameData->points = 0;
@@ -82,7 +83,8 @@ void SetupClient(pPlayer data, pGame gameData) {
 			}
 		}
 
-		gameData->gameBar.pos = MAX_X / 2;
+		for(int i = 0; i < gameData->nPlayers; i++)
+			gameData->gameBar[i].pos = MAX_X / 2;
 
 		gameData->isRunning = 0;
 		gameData->points = 0;

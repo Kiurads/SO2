@@ -131,7 +131,7 @@ typedef struct {
 
 typedef struct {
 	ball gameBall[TRIPLE];
-	bar gameBar;// [MAX_PLAYERS];
+	bar gameBar[MAX_PLAYERS];
 	brick brix[MAX_BRIX_HEIGHT][MAX_BRIX_WIDTH];
 	brinde brindes[MAX_BRINDES];
 	int nPlayers;

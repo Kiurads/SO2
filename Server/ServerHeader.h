@@ -13,3 +13,4 @@ DWORD WINAPI MessageThread(LPVOID);
 DWORD WINAPI BallThread(LPVOID);
 DWORD WINAPI GameThread(LPVOID);
 DWORD WINAPI BrindeThread(LPVOID lpParam);
+void setupGame();

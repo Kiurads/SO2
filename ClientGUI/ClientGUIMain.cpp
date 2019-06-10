@@ -195,7 +195,8 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 
 				SelectObject(barDC, hBmpBar);  // colocar bitmap no DC
 				SelectObject(ballDC, hBmpBall);  // colocar bitmap no DC
-				BitBlt(memDC, gameData.gameBar.pos, gameData.max_y - 8, bmpBar.bmWidth, bmpBar.bmHeight, barDC, 0, 0, SRCCOPY);
+				for(int i = 0; i < gameData.nPlayers; i++)
+					BitBlt(memDC, gameData.gameBar[i].pos, gameData.max_y - 8, bmpBar.bmWidth, bmpBar.bmHeight, barDC, 0, 0, SRCCOPY);
 
 				for(int i = 0; i < TRIPLE; i++)
 					BitBlt(memDC, gameData.gameBall[i].x, gameData.gameBall[i].y, bmpBall.bmWidth, bmpBall.bmHeight, ballDC, 0, 0, SRCAND);
@@ -290,6 +291,7 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 	case WM_COMMAND:
 		switch (LOWORD(wParam)) {
 		case ID_LOGIN:	//Login
+			isRemote = 0;
 			memset(tPrintableMessage, '\0', sizeof(TCHAR) * 200);
 
 			DialogBox(NULL, MAKEINTRESOURCE(IDD_DIALOG_LOGIN), hWnd, (DLGPROC)LoginEventHandler);
@@ -310,6 +312,7 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 			break;
 
 		case ID_REMOTO:
+			isRemote = 1;
 			memset(tPrintableMessage, '\0', sizeof(TCHAR) * 200);
 
 			DialogBox(NULL, MAKEINTRESOURCE(IDD_DIALOG_LOGIN), hWnd, (DLGPROC)LoginEventHandler);
@@ -324,7 +327,7 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 
 				EnableMenuItem(GetMenu(hWnd), ID_REMOTO, MF_DISABLED);
 
-				isRemote = 1;
+				
 				hGameThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ReceiveGame, NULL, 0, NULL);
 			}
 
