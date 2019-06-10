@@ -10,7 +10,7 @@
 //Pipes e Remote Client info
 
 #define SERVER_PIPE_NAME TEXT("\\\\.\\pipe\\server")
-#define CLIENT_PIPE_NAME TEXT("\\\\.\\pipe\\client%d")
+#define CLIENT_PIPE_NAME TEXT("\\\\.\\pipe\\client")
 
 //Zona de dados do jogo
 #define TOP 10
@@ -91,7 +91,6 @@ typedef struct {
 	HANDLE hHasReadEvent;
 	TCHAR tReadEventName[TTAM];
 	TCHAR tHasReadEventName[TTAM];
-	int nLives;
 	int isPlaying;
 	int isRemote;
 } player, *pPlayer;
@@ -113,6 +112,7 @@ typedef struct {
 typedef struct {
 	int pos;
 	int size;
+	int lastTouch;
 } bar;
 
 typedef struct {
@@ -139,6 +139,7 @@ typedef struct {
 	int isRunning;
 	int	max_x;
 	int max_y;
+	int nLives;
 } game, *pGame;
 
 //Esta macro é definida pelo sistema caso estejamos na DLL (<DLL_IMP>_EXPORTS definida)

@@ -257,7 +257,7 @@ LRESULT CALLBACK WindowEventsHandler(HWND hWnd, UINT message, WPARAM wParam, LPA
 				GetClientRect(hWnd, &playerScore);
 				playerScore.top = 20;
 				playerScore.left = MAX_X + 50;
-				_stprintf_s(playerScoreString, 30, TEXT("%s Points: %d Life: %d"), data.tUsername, gameData.points, data.nLives);
+				_stprintf_s(playerScoreString, 30, TEXT("%s Points: %d Life: %d"), data.tUsername, gameData.points, gameData.nLives);
 				DrawText(memDC, playerScoreString, _tcsclen(playerScoreString), &playerScore, DT_SINGLELINE | DT_NOCLIP);
 
 				DeleteDC(brindeDC);

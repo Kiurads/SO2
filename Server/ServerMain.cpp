@@ -73,7 +73,7 @@ DWORD WINAPI RemoteMessageThread(LPVOID lpArg) {
 
 						_tcscpy(players[nPlayers].tUsername, (RemoteMessage)[1]);
 						players[nPlayers].hiScore = 0;
-						players[nPlayers].nLives = INITIAL_LIVES;
+						gameData.nLives = INITIAL_LIVES;
 						players[nPlayers].isRemote = 1;
 
 						_tprintf(TEXT("[LOGIN] O utilizador %s fez login\n"), players[nPlayers].tUsername);
@@ -189,12 +189,20 @@ DWORD WINAPI RemoteMessageThread(LPVOID lpArg) {
 	return 0;
 }
 
+SECURITY_ATTRIBUTES sa;
+
 int _tmain(int argc, LPTSTR argv) {
 #ifdef UNICODE
 	_setmode(_fileno(stdin), _O_WTEXT);
 	_setmode(_fileno(stdout), _O_WTEXT);
 	_setmode(_fileno(stderr), _O_WTEXT);
 #endif
+
+	Seguranca(&sa);
+	if (!CreateDirectory(TEXT("c:\\teste3"), &sa))
+		_tprintf(TEXT("Erro CreateDir!!!"));
+	else
+		_tprintf(TEXT("Directory c:\\teste3 successfuly created"));
 
 	memset(&hBrindeThread, NULL, sizeof(HANDLE));
 	memset(&hBrindeTimer, NULL, sizeof(HANDLE));
@@ -263,6 +271,72 @@ int _tmain(int argc, LPTSTR argv) {
 	return 0;
 }
 
+		void Cleanup(PSID pEveryoneSID, PSID pAdminSID, PACL pACL, PSECURITY_DESCRIPTOR pSD){
+			if (pEveryoneSID)
+				FreeSid(pEveryoneSID);
+			if (pAdminSID)
+				FreeSid(pAdminSID);
+			if (pACL)
+				LocalFree(pACL);
+			if (pSD)
+				LocalFree(pSD);
+		}
+
+		void Seguranca(SECURITY_ATTRIBUTES * sa)
+		{
+			PSECURITY_DESCRIPTOR pSD;
+			PACL pAcl;
+			EXPLICIT_ACCESS ea;
+			PSID pEveryoneSID = NULL, pAdminSID = NULL;
+			SID_IDENTIFIER_AUTHORITY SIDAuthWorld = SECURITY_WORLD_SID_AUTHORITY;
+			TCHAR str[256];
+
+			pSD = (PSECURITY_DESCRIPTOR)LocalAlloc(LPTR,
+				SECURITY_DESCRIPTOR_MIN_LENGTH);
+			if (pSD == NULL) {
+				_tprintf(TEXT("Erro LocalAlloc!!!"));
+				return;
+			}
+			if (!InitializeSecurityDescriptor(pSD, SECURITY_DESCRIPTOR_REVISION)) {
+				_tprintf(TEXT("Erro IniSec!!!"));
+				return;
+			}
+
+			// Create a well-known SID for the Everyone group.
+			if (!AllocateAndInitializeSid(&SIDAuthWorld, 1, SECURITY_WORLD_RID,
+				0, 0, 0, 0, 0, 0, 0, &pEveryoneSID))
+			{
+				_stprintf_s(str, 256, TEXT("AllocateAndInitializeSid() error %u"), GetLastError());
+				_tprintf(str);
+				Cleanup(pEveryoneSID, pAdminSID, NULL, pSD);
+			}
+			else
+				_tprintf(TEXT("AllocateAndInitializeSid() for the Everyone group is OK"));
+
+			ZeroMemory(&ea, sizeof(EXPLICIT_ACCESS));
+
+			ea.grfAccessPermissions = GENERIC_READ | GENERIC_WRITE;
+			ea.grfAccessMode = SET_ACCESS;
+			ea.grfInheritance = SUB_CONTAINERS_AND_OBJECTS_INHERIT;
+			ea.Trustee.TrusteeForm = TRUSTEE_IS_SID;
+			ea.Trustee.TrusteeType = TRUSTEE_IS_WELL_KNOWN_GROUP;
+			ea.Trustee.ptstrName = (LPTSTR)pEveryoneSID;
+
+			if (SetEntriesInAcl(1, &ea, NULL, &pAcl) != ERROR_SUCCESS) {
+				_tprintf(TEXT("Erro SetAcl!!!"));
+				return;
+			}
+
+			if (!SetSecurityDescriptorDacl(pSD, TRUE, pAcl, FALSE)) {
+				_tprintf(TEXT("Erro IniSec!!!"));
+				return;
+			}
+
+			sa->nLength = sizeof(*sa);
+			sa->lpSecurityDescriptor = pSD;
+			sa->bInheritHandle = TRUE;
+		}
+
 int setupServer() {
 	hServerPipeMutex = CreateMutex(NULL, FALSE, MESSAGE_MUTEX_NAME);
 	hGameChangedEvent = CreateEvent(NULL, FALSE, FALSE, GAME_CHANGED_EVENT_NAME);
@@ -283,10 +357,11 @@ int setupServer() {
 
 	hBrindeTimer = CreateWaitableTimer(NULL, TRUE, NULL);
 
-	hServerPipe = CreateNamedPipe(SERVER_PIPE_NAME, PIPE_ACCESS_DUPLEX, PIPE_WAIT | PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE, 1, sizeof(RemoteMessage), sizeof(RemoteMessage), 2000, NULL);
+	hServerPipe = CreateNamedPipe(SERVER_PIPE_NAME, PIPE_ACCESS_DUPLEX, PIPE_WAIT 
+		| PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE, 1, sizeof(RemoteMessage), sizeof(RemoteMessage), 2000, &sa);
 
 	hClientPipe = CreateNamedPipe(CLIENT_PIPE_NAME, PIPE_ACCESS_OUTBOUND, PIPE_WAIT
-		| PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE, 1, sizeof(RemoteMessage), sizeof(RemoteMessage), 2000, NULL);
+		| PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE, 1, sizeof(RemoteMessage), sizeof(RemoteMessage), 2000, &sa);
 
 	if (hServerPipe == INVALID_HANDLE_VALUE || hClientPipe == INVALID_HANDLE_VALUE) {
 		CloseHandle(hServerPipe);
@@ -360,7 +435,7 @@ DWORD WINAPI MessageThread(LPVOID lpArg) {
 
 					_tcscpy(players[nPlayers].tUsername, (*lpMessageBuffer)[1]);
 					players[nPlayers].hiScore = 0;
-					players[nPlayers].nLives = INITIAL_LIVES;
+					gameData.nLives = INITIAL_LIVES;
 					players[nPlayers].isRemote = 0;
 
 					_tprintf(TEXT("[LOGIN] O utilizador %s fez login\n"), players[nPlayers].tUsername);
@@ -469,8 +544,9 @@ DWORD WINAPI BallThread(LPVOID lpArg) {
 
 				gameData.gameBall[i].y = gameData.max_y - IMAGE_WIDTH / 2 - 1;
 
-				for(int j = 0; j < nPlayers; j++)
-					gameData.gameBall[i].x = gameData.gameBar[j].pos + (IMAGE_WIDTH / 2 - IMAGE_HEIGHT / 2) - 1;
+				int res = rand() % nPlayers;
+
+				gameData.gameBall[i].x = gameData.gameBar[res].pos + (IMAGE_WIDTH / 2 - IMAGE_HEIGHT / 2) - 1;
 
 				firstBallPlaced = TRUE;
 			}
@@ -511,10 +587,13 @@ DWORD WINAPI BallThread(LPVOID lpArg) {
 
 				if (gameData.gameBall[i].y >= gameData.max_y - IMAGE_HEIGHT) {
 					liBallTimer.QuadPart = -500000LL;
-					players->nLives--;
 
-					/*if (i == MAIN_BALL && players->nLives <= 0)//update scoreboard
-						break;*/
+					gameData.nLives--;
+
+					if (i == MAIN_BALL && gameData.nLives <= 0) {//update scoreboard
+						termina = TRUE;
+						break;
+					}
 
 					if (i == MAIN_BALL) {
 						gameData.gameBall[i].y = gameData.max_y - (IMAGE_HEIGHT * 2) - 1;
@@ -541,8 +620,15 @@ DWORD WINAPI BallThread(LPVOID lpArg) {
 				}
 
 				for(int j = 0; j < nPlayers; j++)
-				if (gameData.gameBall[i].y == gameData.max_y - IMAGE_HEIGHT * 2 && gameData.gameBar[j].pos <= (gameData.gameBall[i].x + BALL_WIDTH) && gameData.gameBar[j].pos + IMAGE_WIDTH >= gameData.gameBall[i].x)
-					gameData.gameBall[i].vspeed = gameData.gameBall[i].vspeed * (-1);
+					if (gameData.gameBall[i].y == gameData.max_y - IMAGE_HEIGHT * 2 && gameData.gameBar[j].pos <= (gameData.gameBall[i].x + BALL_WIDTH) && gameData.gameBar[j].pos + IMAGE_WIDTH >= gameData.gameBall[i].x) {
+						gameData.gameBall[i].vspeed = gameData.gameBall[i].vspeed * (-1);
+						gameData.gameBar[j].lastTouch = 1;
+						for (int k = 0; k < nPlayers; k++) {
+							if(k != j)
+								gameData.gameBar[k].lastTouch = 0;
+						}
+
+					}
 
 				for (int j = 0; j < MAX_BRIX_HEIGHT; j++) {
 					for (int k = 0; k < MAX_BRIX_WIDTH; k++) {
@@ -557,7 +643,11 @@ DWORD WINAPI BallThread(LPVOID lpArg) {
 								hitBrick = true;
 
 								gameData.points += gameData.brix[j][k].points;
-								players->hiScore = gameData.points;
+
+								for (int l = 0; l < nPlayers; l++) {
+										if(gameData.gameBar[k].lastTouch == 1)
+											players[l].hiScore = gameData.points;
+								}
 							}
 						}
 						if (gameData.gameBall[i].y == gameData.brix[j][k].posy - IMAGE_HEIGHT && gameData.brix[j][k].posx <= (gameData.gameBall[i].x + BALL_WIDTH) && gameData.brix[j][k].posx + IMAGE_WIDTH >= gameData.gameBall[i].x && gameData.brix[j][k].health > 0) {
@@ -582,7 +672,11 @@ DWORD WINAPI BallThread(LPVOID lpArg) {
 							hitBrick = true;
 
 							gameData.points += gameData.brix[j][k].points;
-							players->hiScore = gameData.points;
+
+							for (int l = 0; l < nPlayers; l++) {
+								if (gameData.gameBar[k].lastTouch == 1)
+									players[l].hiScore = gameData.points;
+							}
 						}
 						if (gameData.gameBall[i].x == gameData.brix[j][k].posx - BALL_WIDTH && gameData.brix[j][k].posy <= (gameData.gameBall[i].y + BALL_HEIGHT) && gameData.brix[j][k].posy + BALL_HEIGHT >= gameData.gameBall[i].y && gameData.brix[j][k].health > 0) {
 							gameData.gameBall[i].hspeed = LFT;
@@ -594,7 +688,11 @@ DWORD WINAPI BallThread(LPVOID lpArg) {
 							hitBrick = true;
 
 							gameData.points += gameData.brix[j][k].points;
-							players->hiScore = gameData.points;
+
+							for (int l = 0; l < nPlayers; l++) {
+								if (gameData.gameBar[k].lastTouch == 1)
+									players[l].hiScore = gameData.points;
+							}
 						}
 
 						if (hitBrick && gameData.brix[j][k].isSpecial) {
@@ -668,7 +766,7 @@ DWORD WINAPI BrindeThread(LPVOID lpParam) {
 							}
 							break;
 						case EXTRA_LIFE:
-							players->nLives++;
+							gameData.nLives++;
 							break;
 						case TRIPLE:
 							tripleActive = TRUE;
@@ -696,7 +794,7 @@ DWORD WINAPI GameThread(LPVOID lpParam) {
 	while (!termina) {
 		WaitForSingleObject(hGameChangedEvent, INFINITE);
 
-		//setupGame();
+		//setupBall();
 
 		gameData.nPlayers = nPlayers;
 

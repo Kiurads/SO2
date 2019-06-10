@@ -65,7 +65,7 @@ void SetupClient(pPlayer data, pGame gameData) {
 	gameData->max_y = MAX_Y;
 
 	memset(data->tUsername, '\0', sizeof(TCHAR) * TAM);
-	data->nLives = INITIAL_LIVES;
+	gameData->nLives = INITIAL_LIVES;
 	}
 	else {
 		gGameData = gameData;
@@ -92,7 +92,7 @@ void SetupClient(pPlayer data, pGame gameData) {
 		gameData->max_y = MAX_Y;
 
 		memset(data->tUsername, '\0', sizeof(TCHAR) * TAM);
-		data->nLives = INITIAL_LIVES;
+		gameData->nLives = INITIAL_LIVES;
 	}
 }
 
